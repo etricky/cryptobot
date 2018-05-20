@@ -1,0 +1,30 @@
+[
+	{
+		"name": "gdax",
+		"historyDays": 120,
+		"currencies": [
+			{
+				"base_currency": "BTC",
+				"quote_currency": "EUR"
+			},
+			{
+				"base_currency": "ETH",
+				"quote_currency": "EUR"
+			},
+			{
+				"base_currency": "LTC",
+				"quote_currency": "EUR"
+			}
+		]
+	},
+	{
+		"name": "bitstamp",
+		"historyDays": 1,
+		"currencies": [
+			{
+				"base_currency": "XRP",
+				"quote_currency": "EUR"
+			}
+		]
+	}
+]
