@@ -1,12 +1,15 @@
 package com.etricky.cryptobot.service.exchanges.common;
 
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@ToString
 public enum ExchangeEnum {
-	GDAX("gdax", "org.knowm.xchange.gdax.GDAXExchange", "c"), BITSTAMP("bitstamp",
-			"org.knowm.xchange.bitstamp.BitstampExchange",
-			"c"), BINANCE("binance", "org.knowm.xchange.binance.BitstampExchange", "c");
+	GDAX("gdax", "org.knowm.xchange.gdax.GDAXExchange", "com.etricky.cryptobot.service.exchanges.Gdax"), BITSTAMP(
+			"bitstamp", "org.knowm.xchange.bitstamp.BitstampExchange",
+			"com.etricky.cryptobot.service.exchanges.Bitstamp"), BINANCE("binance",
+					"org.knowm.xchange.binance.BitstampExchange", "com.etricky.cryptobot.service.exchanges.Binance");
 
 	private String name;
 	private String xchangeClass;

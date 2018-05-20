@@ -1,40 +1,34 @@
 package com.etricky.cryptobot.service.exchanges;
 
-import org.knowm.xchange.currency.CurrencyPair;
-
 import com.etricky.cryptobot.service.exchanges.common.ExchangeGeneric;
 
 import info.bitrich.xchangestream.core.ProductSubscription;
-import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import info.bitrich.xchangestream.gdax.GDAXStreamingExchange;
-import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class Gdax extends ExchangeGeneric implements Runnable {
+public class Gdax extends ExchangeGeneric {
 
-	@Override
-	public void startTradeThread() {
+	private void startTrade() {
 		log.debug("start");
 
-		ProductSubscription productSubscription = ProductSubscription.create().addTrades(CurrencyPair.BTC_USD).build();
+		// TODO process trade history
+		shellCommands.sendMessage("Started thread: " + threadInfo.getThreadKey(), true);
+		ProductSubscription productSubscription = ProductSubscription.create()
+				.addTrades(threadInfo.getCurrencyEnum().getCurrencyPair()).build();
 
-		StreamingExchange exchange = StreamingExchangeFactory.INSTANCE
-				.createExchange(GDAXStreamingExchange.class.getName());
+		exchange = StreamingExchangeFactory.INSTANCE.createExchange(GDAXStreamingExchange.class.getName());
 		exchange.connect(productSubscription).blockingAwait();
 
-		Disposable subscription = exchange.getStreamingMarketDataService().getTrades(CurrencyPair.BTC_USD)
-				.subscribe(trade -> {
+		subscription = exchange.getStreamingMarketDataService()
+				.getTrades(threadInfo.getCurrencyEnum().getCurrencyPair()).subscribe(trade -> {
 					log.info("TRADE: {}", trade);
-				}, throwable -> log.error("ERROR in getting trades: ", throwable));
-
-		log.debug("done");
-	}
-
-	@Override
-	public void stopTradeThread() {
-		log.debug("start");
+					// TODO process live trades
+				}, throwable -> {
+					log.error("ERROR in getting trades: ", throwable);
+					stopTrade();
+				});
 
 		log.debug("done");
 	}
@@ -43,15 +37,14 @@ public class Gdax extends ExchangeGeneric implements Runnable {
 	public void run() {
 		log.debug("start");
 
-		startTradeThread();
+		startTrade();
 
 		try {
 			Thread.sleep(Long.MAX_VALUE);
 		} catch (InterruptedException e) {
 			log.debug("thread interrupted");
 
-			stopTradeThread();
-
+			stopTrade();
 		}
 
 		log.debug("done");

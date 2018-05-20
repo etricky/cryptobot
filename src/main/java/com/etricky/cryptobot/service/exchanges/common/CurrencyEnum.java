@@ -2,9 +2,11 @@ package com.etricky.cryptobot.service.exchanges.common;
 
 import org.knowm.xchange.currency.CurrencyPair;
 
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@ToString
 public enum CurrencyEnum {
 	BTC_EUR("btc_eur", "btc", "eur", CurrencyPair.BTC_EUR), ETH_EUR("eth_eur", "eth", "eur",
 			CurrencyPair.ETH_EUR), LTC_EUR("ltc_eur", "ltc", "eur",
