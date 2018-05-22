@@ -6,8 +6,8 @@ import java.util.Arrays;
 
 import org.springframework.core.io.ClassPathResource;
 
-import com.etricky.cryptobot.service.interfaces.jsonFiles.ExchangeJson;
-import com.etricky.cryptobot.service.interfaces.jsonFiles.JsonFilesReader;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFilesReader;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 

@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.service.common;
+package com.etricky.cryptobot.core.common;
 
 import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.stereotype.Component;

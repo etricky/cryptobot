@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.service.exchanges.common;
+package com.etricky.cryptobot.core.exchanges.common;
 
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -6,14 +6,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ToString
 public enum ExchangeEnum {
-	GDAX("gdax", "org.knowm.xchange.gdax.GDAXExchange", "com.etricky.cryptobot.service.exchanges.Gdax"), BITSTAMP(
+	GDAX("gdax", "org.knowm.xchange.gdax.GDAXExchange", "gdaxExchange"), BITSTAMP(
 			"bitstamp", "org.knowm.xchange.bitstamp.BitstampExchange",
-			"com.etricky.cryptobot.service.exchanges.Bitstamp"), BINANCE("binance",
-					"org.knowm.xchange.binance.BitstampExchange", "com.etricky.cryptobot.service.exchanges.Binance");
+			"bitstampExchange"), BINANCE("binance",
+					"org.knowm.xchange.binance.BitstampExchange", "binanceExchange");
 
 	private String name;
 	private String xchangeClass;
-	private String crytobotClass;
+	private String crytobotBean;
 
 	public String getName() {
 		return name;
@@ -31,18 +31,18 @@ public enum ExchangeEnum {
 		this.xchangeClass = xchangeClass;
 	}
 
-	public String getCrytobotClass() {
-		return crytobotClass;
+	public String getCrytobotBean() {
+		return crytobotBean;
 	}
 
-	public void setCrytobotClass(String crytobotClass) {
-		this.crytobotClass = crytobotClass;
+	public void setCrytobotBean(String crytobotClass) {
+		this.crytobotBean = crytobotClass;
 	}
 
-	private ExchangeEnum(String name, String xchangeClass, String crytobotClass) {
+	private ExchangeEnum(String name, String xchangeClass, String crytobotBean) {
 		this.name = name;
 		this.xchangeClass = xchangeClass;
-		this.crytobotClass = crytobotClass;
+		this.crytobotBean = crytobotBean;
 	}
 
 	public static ExchangeEnum getInstanceByName(String name) {

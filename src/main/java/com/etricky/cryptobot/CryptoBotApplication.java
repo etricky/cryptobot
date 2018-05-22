@@ -8,8 +8,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 
-import com.etricky.cryptobot.service.common.ExitCode;
-import com.etricky.cryptobot.service.interfaces.slack.Slack;
+import com.etricky.cryptobot.core.common.ExitCode;
+import com.etricky.cryptobot.core.interfaces.slack.Slack;
 
 import lombok.extern.slf4j.Slf4j;
 

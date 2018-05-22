@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.service.exchanges.common;
+package com.etricky.cryptobot.core.exchanges.common;
 
 import lombok.extern.slf4j.Slf4j;
 

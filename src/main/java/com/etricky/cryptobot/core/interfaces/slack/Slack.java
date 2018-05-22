@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.service.interfaces.slack;
+package com.etricky.cryptobot.core.interfaces.slack;
 
 import java.io.IOException;
 
@@ -6,8 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import com.etricky.cryptobot.service.interfaces.jsonFiles.JsonFiles;
-import com.etricky.cryptobot.service.interfaces.jsonFiles.SlackJson;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.SlackJson;
 import com.ullink.slack.simpleslackapi.SlackChannel;
 import com.ullink.slack.simpleslackapi.SlackSession;
 import com.ullink.slack.simpleslackapi.impl.SlackSessionFactory;

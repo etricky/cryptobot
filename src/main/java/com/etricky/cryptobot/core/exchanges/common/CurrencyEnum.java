@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.service.exchanges.common;
+package com.etricky.cryptobot.core.exchanges.common;
 
 import org.knowm.xchange.currency.CurrencyPair;
 

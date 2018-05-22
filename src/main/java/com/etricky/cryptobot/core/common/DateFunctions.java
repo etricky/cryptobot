@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.service.common;
+package com.etricky.cryptobot.core.common;
 
 import java.time.Instant;
 import java.time.ZoneId;

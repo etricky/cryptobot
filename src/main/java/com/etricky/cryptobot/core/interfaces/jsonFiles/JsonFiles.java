@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.service.interfaces.jsonFiles;
+package com.etricky.cryptobot.core.interfaces.jsonFiles;
 
 import java.io.IOException;
 
