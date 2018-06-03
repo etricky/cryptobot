@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
@@ -14,6 +15,8 @@ import com.etricky.cryptobot.core.common.ExitCode;
 import com.etricky.cryptobot.core.exchanges.common.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeThreads;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 import com.etricky.cryptobot.core.interfaces.slack.Slack;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,29 +28,30 @@ public class ShellCommands implements Quit.Command {
 	CryptoBotApplication cryptobotApp;
 	ExitCode exitCode;
 	ExchangeThreads exchangeThreads;
+	JsonFiles jsonFiles;
 
 	public ShellCommands(Slack slack, CryptoBotApplication cryptobotApp, ExitCode exitCode,
-			ExchangeThreads exchangeThreads) {
+			ExchangeThreads exchangeThreads, JsonFiles jsonFiles) {
 		log.debug("start");
 
 		this.slack = slack;
 		this.cryptobotApp = cryptobotApp;
 		this.exitCode = exitCode;
 		this.exchangeThreads = exchangeThreads;
+		this.jsonFiles = jsonFiles;
 		sendMessage("Started CryptoBot!!!", true);
 
 		log.debug("done");
 	}
 
 	@ShellMethod(value = "Starts processing a currency from an exchange", key = { "start", "s" })
-	public void start(String exchange, String currency) throws IOException, ClassNotFoundException,
-			InstantiationException, IllegalAccessException {
+	public void start(String exchange, String currency)
+			throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {
 
-		log.debug("start. exchange: {} currency: {}", exchange, currency);
-
-		sendMessage("Starting currency for exchange: " + exchange + " currency: " + currency, true);
+		log.debug("start. exchange: {} currency: {}", exchange, currency);		
 
 		if (validateExchangeCurreny(exchange, currency)) {
+			sendMessage("Starting currency for exchange: " + exchange + " currency: " + currency, true);
 			exchangeThreads.startThread(exchange, currency);
 		} else
 			log.debug("not a valid command");
@@ -70,7 +74,7 @@ public class ShellCommands implements Quit.Command {
 		log.debug("done");
 	}
 
-	@ShellMethod(value = "List current running currencies for each exchange", key = {"list","l"})
+	@ShellMethod(value = "List current running currencies for each exchange", key = { "list", "l" })
 	public void list() {
 		log.debug("start");
 
@@ -86,7 +90,7 @@ public class ShellCommands implements Quit.Command {
 				});
 			});
 		}
-		
+
 		log.debug("done");
 	}
 
@@ -94,7 +98,7 @@ public class ShellCommands implements Quit.Command {
 	public void quit() throws IOException {
 		log.debug("start");
 
-		sendMessage("Shuting down CryptoBot!!!", true);
+		sendMessage("Shutting down CryptoBot!!!", true);
 
 		// stops all exchanges threads
 		exchangeThreads.stopAllThreads();
@@ -107,6 +111,7 @@ public class ShellCommands implements Quit.Command {
 
 	private boolean validateExchangeCurreny(String exchange, String currency) {
 		boolean validCommand = true;
+		log.debug("start. exchange: {} currency: {}", exchange, currency);
 
 		if (ExchangeEnum.getInstanceByName(exchange) == null) {
 			sendMessage("Not a valid exchange", true);
@@ -126,6 +131,30 @@ public class ShellCommands implements Quit.Command {
 			validCommand = false;
 		}
 
+		// checks if the currency is valid for the exchange
+		Map<String, ExchangeJson> exchangeJson = jsonFiles.getExchangesJson();
+		if (exchangeJson.containsKey(exchange.toUpperCase())) {
+			if (!exchangeJson.get(exchange.toUpperCase()).getCurrenciesMap().containsKey(currency.toUpperCase())) {
+				sendMessage("Not a valid currency for this exchange", true);
+				sendMessage("Valid currencies:");
+				exchangeJson.get(exchange).getCurrenciesMap().forEach((n, c) -> {
+					sendMessage(" - " + c.getShortName());
+				});
+
+				validCommand = false;
+
+			}
+		} else {
+			sendMessage("Exchange not yet configured", true);
+			sendMessage("Valid exchanges:");
+			exchangeJson.forEach((n, e) -> {
+				sendMessage(" - " + e.getName());
+			});
+
+			validCommand = false;
+		}
+
+		log.debug("done. validCommand: {}", validCommand);
 		return validCommand;
 	}
 
@@ -134,10 +163,14 @@ public class ShellCommands implements Quit.Command {
 	}
 
 	public void sendMessage(String msg, boolean toSlack) {
+		log.debug("start. msg: {} toSlack: {}", msg, toSlack);
+
 		System.out.println(msg);
 
 		if (toSlack)
 			slack.sendMessage(msg);
+
+		log.debug("done");
 	}
 
 }

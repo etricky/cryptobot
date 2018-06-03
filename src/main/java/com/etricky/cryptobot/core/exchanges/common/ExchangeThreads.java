@@ -83,11 +83,11 @@ public class ExchangeThreads {
 
 	public void stopThread(String exchange, String currency) {
 		log.debug("start. exchange: {} currency: {}", exchange, currency);
-
+		
 		setThreadName(exchange, currency);
 
 		if (threadsMap.containsKey(threadName)) {
-			log.debug("found thread: {}, sending interrupt", threadName);
+			log.debug("found thread: {} id: {}, sending interrupt", threadName,threadsMap.get(threadName).getThreadInfo().getThread().getId());
 			threadsMap.get(threadName).getThreadInfo().interrupt();
 		} else {
 			log.debug("no thread {} found", threadName);

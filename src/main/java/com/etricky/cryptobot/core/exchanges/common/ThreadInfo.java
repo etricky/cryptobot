@@ -21,18 +21,27 @@ public class ThreadInfo {
 	@NonNull
 	private ExchangeGeneric exchangeGeneric;
 	@NonNull
-	String threadName;
-	Thread thread;
+	private String threadName;
+	private Thread thread;
 
 	public void setThread(Thread thread, UncaughtExceptionHandler excHandler) {
-		this.thread=thread;
+		this.thread = thread;
 		this.thread.setUncaughtExceptionHandler(excHandler);
 		this.thread.setName(threadName);
+		log.debug("thread: {} id: {}", threadName, thread.getId());
 	}
-	
+
 	public void interrupt() {
-		log.debug("start");
+		log.debug("start. thread: {} id: {} state: {} current thread: {} id: {}", threadName, thread.getId(),
+				thread.getState(), Thread.currentThread().getName(), Thread.currentThread().getId());
+
 		thread.interrupt();
+
+		if (thread.isInterrupted())
+			log.debug("thread is interrupted");
+		else {
+			log.debug("thread still lives!!!");
+		}
 		log.debug("done");
 	}
 

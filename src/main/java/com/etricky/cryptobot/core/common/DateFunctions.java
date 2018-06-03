@@ -3,31 +3,42 @@ package com.etricky.cryptobot.core.common;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 public class DateFunctions {
 
-	static ZonedDateTime zdt;
-	static Long unixTime;
 	final static ZoneId UTC = ZoneId.of("UTC");
 
-	public static ZonedDateTime getZDTfromUnixTime(Long unixTime) {
-		zdt = ZonedDateTime.ofInstant(Instant.ofEpochSecond(unixTime), UTC);
-		log.debug("unixTime: {} zdt: {}", unixTime, zdt);
-		return zdt;
+	public static ZonedDateTime getZDTfromUnixTime(Long unixTime) {		
+		return ZonedDateTime.ofInstant(Instant.ofEpochSecond(unixTime), UTC);
 	}
 
 	public static Long getUnixTimeFromZDT(ZonedDateTime zdt) {
-		unixTime = zdt.toEpochSecond();
-		log.debug("zdt: {} unixTime: {}", zdt, unixTime);
-		return unixTime;
+		return zdt.toEpochSecond();
 	}
 
-	public static ZonedDateTime getNow() {
-		zdt = ZonedDateTime.now(UTC);
-		log.debug("zdt: {}", zdt);
-		return zdt;
+	public static Long getUnixTimeFromdDate(Date date) {
+		return ZonedDateTime.ofInstant(date.toInstant(), UTC).toEpochSecond();
+	}
+
+	public static ZonedDateTime getZDTFromDate(Date date) {
+		return ZonedDateTime.ofInstant(date.toInstant(), UTC);
+	}
+
+	public static ZonedDateTime getNowZDT() {
+		return ZonedDateTime.now(UTC);
+	}
+
+	public static long getNowUnixTime() {		
+		return ZonedDateTime.now(UTC).toEpochSecond();
+	}
+
+	public static String getStringFromZDT(ZonedDateTime zdt) {
+		return zdt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mmX"));
+	}
+
+	public static String getStringFromUnixTime(long unixtime) {
+		return getStringFromZDT(getZDTfromUnixTime(unixtime));
 	}
 }

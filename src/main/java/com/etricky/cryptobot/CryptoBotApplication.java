@@ -33,10 +33,11 @@ public class CryptoBotApplication {
 	public void terminate(ExitCode exitCode) throws IOException {
 		log.debug("start. exitCode: {}", exitCode);
 
+		slack.sendMessage("Bye!!!");
 		slack.disconnect();
 		SpringApplication.exit(appContext, exitCode);
 
-		log.debug("Exited CryptoBot!!!!");
+		log.debug("Exited CryptoBot!!!");
 		System.exit(exitCode.getExitCode());
 	}
 }

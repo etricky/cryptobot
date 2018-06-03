@@ -1,8 +1,12 @@
 package com.etricky.cryptobot.core.interfaces.jsonFiles;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 public class ExchangeJson {
 	String name;
-	String historyDays;
 	Currency[] currencies;
 
 	public String getName() {
@@ -13,16 +17,12 @@ public class ExchangeJson {
 		this.name = name;
 	}
 
-	public String getHistoryDays() {
-		return historyDays;
-	}
-
-	public void setHistoryDays(String historyDays) {
-		this.historyDays = historyDays;
-	}
-
 	public Currency[] getCurrencies() {
 		return currencies;
+	}
+
+	public Map<String, Currency> getCurrenciesMap() {
+		return Arrays.stream(currencies).collect(Collectors.toMap(Currency::getShortName, Function.identity()));
 	}
 
 	public void setCurrencies(Currency[] currencies) {
@@ -47,6 +47,10 @@ public class ExchangeJson {
 
 		public void setQuote_currency(String quote_currency) {
 			this.quote_currency = quote_currency;
+		}
+
+		public String getShortName() {
+			return base_currency + "_" + quote_currency;
 		}
 
 	}

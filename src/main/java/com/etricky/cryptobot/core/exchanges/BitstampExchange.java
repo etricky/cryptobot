@@ -1,11 +1,11 @@
 package com.etricky.cryptobot.core.exchanges;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.exchanges.common.ExchangeGeneric;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.shell.ShellCommands;
+import com.etricky.cryptobot.repositories.TradesEntityRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -13,10 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class BitstampExchange extends ExchangeGeneric {
 
-	@Autowired
-	public BitstampExchange(ExchangeThreads exchangeThreads, ShellCommands shellCommands) {
-		super(exchangeThreads, shellCommands);
-		// TODO Auto-generated constructor stub
+	public BitstampExchange(ExchangeThreads exchangeThreads, ShellCommands shellCommands,
+			TradesEntityRepository tradesEntityRepository) {
+		super(exchangeThreads, shellCommands, tradesEntityRepository);
 	}
 
 	private void startTrade() {

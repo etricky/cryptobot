@@ -1,6 +1,10 @@
 package com.etricky.cryptobot.core.interfaces.jsonFiles;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -27,8 +31,10 @@ public class JsonFiles {
 		log.debug("done");
 	}
 
-	public ExchangeJson[] getExchangesJson() {
-		return exchangesJson;
+	public Map<String, ExchangeJson> getExchangesJson() {
+		Map<String, ExchangeJson> mapExc = Arrays.asList(exchangesJson).stream()
+				.collect(Collectors.toMap(ExchangeJson::getName, Function.identity()));
+		return mapExc;
 	}
 
 	public SlackJson getSlackJson() {

@@ -1,7 +1,6 @@
 [
 	{
-		"name": "gdax",
-		"historyDays": 120,
+		"name": "GDAX",
 		"currencies": [
 			{
 				"base_currency": "BTC",
@@ -18,8 +17,7 @@
 		]
 	},
 	{
-		"name": "bitstamp",
-		"historyDays": 1,
+		"name": "BITSTAMP",
 		"currencies": [
 			{
 				"base_currency": "XRP",

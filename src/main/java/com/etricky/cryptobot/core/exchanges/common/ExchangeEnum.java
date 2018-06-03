@@ -6,13 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ToString
 public enum ExchangeEnum {
-	GDAX("gdax", "org.knowm.xchange.gdax.GDAXExchange", "gdaxExchange"), BITSTAMP(
-			"bitstamp", "org.knowm.xchange.bitstamp.BitstampExchange",
-			"bitstampExchange"), BINANCE("binance",
-					"org.knowm.xchange.binance.BitstampExchange", "binanceExchange");
+	GDAX("gdax", "gdaxExchange", 120), BITSTAMP("bitstamp", "bitstampExchange", 1), BINANCE("binance",
+			"binanceExchange", 1);
 
 	private String name;
-	private String xchangeClass;
+	private int historyDays;
 	private String crytobotBean;
 
 	public String getName() {
@@ -23,12 +21,12 @@ public enum ExchangeEnum {
 		this.name = name;
 	}
 
-	public String getXchangeClass() {
-		return xchangeClass;
+	public int getHistoryDays() {
+		return historyDays;
 	}
 
-	public void setXchangeClass(String xchangeClass) {
-		this.xchangeClass = xchangeClass;
+	public void setHistoryDays(int historyDays) {
+		this.historyDays = historyDays;
 	}
 
 	public String getCrytobotBean() {
@@ -39,10 +37,10 @@ public enum ExchangeEnum {
 		this.crytobotBean = crytobotClass;
 	}
 
-	private ExchangeEnum(String name, String xchangeClass, String crytobotBean) {
+	private ExchangeEnum(String name, String crytobotBean, int historyDays) {
 		this.name = name;
-		this.xchangeClass = xchangeClass;
 		this.crytobotBean = crytobotBean;
+		this.historyDays = historyDays;
 	}
 
 	public static ExchangeEnum getInstanceByName(String name) {

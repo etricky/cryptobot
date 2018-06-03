@@ -98,3 +98,4 @@ local.properties
 # Project specific
 ######################
 *.key.json
+/.dbeaver-data-sources.xml
