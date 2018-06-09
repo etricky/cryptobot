@@ -15,7 +15,7 @@ public class BinanceExchange extends ExchangeGeneric {
 
 	public BinanceExchange(ExchangeThreads exchangeThreads, ShellCommands shellCommands,
 			TradesEntityRepository tradesEntityRepository) {
-		super(exchangeThreads, shellCommands, tradesEntityRepository);
+		super(exchangeThreads, shellCommands);
 	}
 
 	private void startTrade() {

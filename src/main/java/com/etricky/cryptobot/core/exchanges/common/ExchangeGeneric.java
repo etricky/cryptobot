@@ -3,7 +3,6 @@ package com.etricky.cryptobot.core.exchanges.common;
 import java.lang.Thread.UncaughtExceptionHandler;
 
 import com.etricky.cryptobot.core.interfaces.shell.ShellCommands;
-import com.etricky.cryptobot.repositories.TradesEntityRepository;
 
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.disposables.Disposable;
@@ -19,14 +18,10 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 	protected StreamingExchange exchange;
 	protected ExchangeThreads exchangeThreads;
 	protected ShellCommands shellCommands;
-	@Getter
-	protected TradesEntityRepository tradesEntityRepository;
 
-	public ExchangeGeneric(ExchangeThreads exchangeThreads, ShellCommands shellCommands,
-			TradesEntityRepository tradesEntityRepository) {
+	public ExchangeGeneric(ExchangeThreads exchangeThreads, ShellCommands shellCommands) {
 		this.exchangeThreads = exchangeThreads;
 		this.shellCommands = shellCommands;
-		this.tradesEntityRepository = tradesEntityRepository;
 	}
 
 	public void setThreadInfo(ThreadInfo threadInfo) {
@@ -71,6 +66,9 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 			log.debug("sending interrupt");
 			t.interrupt();
 		}
+
+		// in case the interrupt hasn't stopped the thread
+		stopTrade();
 
 		log.debug("done");
 	}

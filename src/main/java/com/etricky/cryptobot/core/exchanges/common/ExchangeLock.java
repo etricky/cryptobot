@@ -5,6 +5,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.springframework.stereotype.Component;
 
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -12,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ExchangeLock {
 	private HashMap<String, ReentrantLock> lockMap = new HashMap<>();
 
-	public void getLock(String exchange) {
+	public void getLock(@NonNull String exchange) throws ExchangeException {
 		try {
 			if (lockMap.size() == 0 || !lockMap.containsKey(exchange)) {
 				log.debug("adding new lock");
@@ -25,10 +26,11 @@ public class ExchangeLock {
 			log.debug("interrupted while getting the lock");
 
 			releaseLock(exchange);
+			throw new ExchangeException("Thread interrupted");
 		}
 	}
 
-	public void releaseLock(String exchange) {
+	public void releaseLock(@NonNull String exchange) {
 		if (lockMap.containsKey(exchange)) {
 			if (lockMap.get(exchange).isHeldByCurrentThread()) {
 				lockMap.get(exchange).unlock();

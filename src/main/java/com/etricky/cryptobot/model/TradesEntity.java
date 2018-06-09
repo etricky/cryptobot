@@ -42,10 +42,8 @@ public class TradesEntity {
 	private boolean fakeTrade = false;
 
 	public TradesEntity getFake() {
-
-		return TradesEntity.builder().fakeTrade(true).closePrice(BigDecimal.valueOf(0)).openPrice(BigDecimal.valueOf(0))
-				.highPrice(BigDecimal.valueOf(0)).lowPrice(BigDecimal.valueOf(0))
-				.timestamp(DateFunctions.getZDTfromUnixTime(tradeId.getUnixtime()))
+		return TradesEntity.builder().fakeTrade(true).closePrice(closePrice).openPrice(openPrice).highPrice(highPrice)
+				.lowPrice(lowPrice).timestamp(DateFunctions.getZDTfromUnixTime(tradeId.getUnixtime()))
 				.tradeId(TradesPK.builder().currency(tradeId.getCurrency()).exchange(tradeId.getExchange())
 						.unixtime(tradeId.getUnixtime()).build())
 				.build();

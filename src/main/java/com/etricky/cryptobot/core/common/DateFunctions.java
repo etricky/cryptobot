@@ -10,7 +10,7 @@ public class DateFunctions {
 
 	final static ZoneId UTC = ZoneId.of("UTC");
 
-	public static ZonedDateTime getZDTfromUnixTime(Long unixTime) {		
+	public static ZonedDateTime getZDTfromUnixTime(Long unixTime) {
 		return ZonedDateTime.ofInstant(Instant.ofEpochSecond(unixTime), UTC);
 	}
 
@@ -30,7 +30,7 @@ public class DateFunctions {
 		return ZonedDateTime.now(UTC);
 	}
 
-	public static long getNowUnixTime() {		
+	public static long getNowUnixTime() {
 		return ZonedDateTime.now(UTC).toEpochSecond();
 	}
 
@@ -38,7 +38,12 @@ public class DateFunctions {
 		return zdt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mmX"));
 	}
 
-	public static String getStringFromUnixTime(long unixtime) {
-		return getStringFromZDT(getZDTfromUnixTime(unixtime));
+	public static String getStringFromUnixTime(long unixTime) {
+		return getStringFromZDT(getZDTfromUnixTime(unixTime));
+	}
+
+	public static long getNowToEvenMinute() {
+		long unixTime = getNowUnixTime();
+		return getZDTfromUnixTime(unixTime).minusSeconds(getZDTfromUnixTime(unixTime).getSecond()).toEpochSecond();
 	}
 }

@@ -13,7 +13,6 @@ import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeGeneric;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.shell.ShellCommands;
-import com.etricky.cryptobot.repositories.TradesEntityRepository;
 
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
@@ -28,17 +27,17 @@ public class GdaxExchange extends ExchangeGeneric {
 
 	@Autowired
 	private GdaxHistoryTrades gdaxHistoryTrades;
+	@Autowired
 	private GdaxLiveTrades gdaxLiveTrade;
 
-	public GdaxExchange(ExchangeThreads exchangeThreads, ShellCommands shellCommands,
-			TradesEntityRepository tradesEntityRepository) {
-		super(exchangeThreads, shellCommands, tradesEntityRepository);
-		gdaxLiveTrade = new GdaxLiveTrades(this);
+	public GdaxExchange(ExchangeThreads exchangeThreads, ShellCommands shellCommands) {
+		super(exchangeThreads, shellCommands);
 	}
 
 	@PostConstruct
 	private void initiateAuxBeans() {
 		gdaxHistoryTrades.setGdaxExchange(this);
+		gdaxLiveTrade.setGdaxExchange(this);
 	}
 
 	private void processTrade(Trade trade) {
@@ -57,7 +56,7 @@ public class GdaxExchange extends ExchangeGeneric {
 
 	private void startTrade() throws InterruptedException, ExchangeException {
 		log.debug("start");
-		
+
 		try {
 			// before getting any new trades it must fill the trade history
 			gdaxHistoryTrades.processTradeHistory();

@@ -15,7 +15,7 @@ public class BitstampExchange extends ExchangeGeneric {
 
 	public BitstampExchange(ExchangeThreads exchangeThreads, ShellCommands shellCommands,
 			TradesEntityRepository tradesEntityRepository) {
-		super(exchangeThreads, shellCommands, tradesEntityRepository);
+		super(exchangeThreads, shellCommands);
 	}
 
 	private void startTrade() {
