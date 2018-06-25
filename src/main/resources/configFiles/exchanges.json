@@ -7,6 +7,10 @@
 				"quote_currency": "EUR"
 			},
 			{
+				"base_currency": "BTC",
+				"quote_currency": "USD"
+			},
+			{
 				"base_currency": "ETH",
 				"quote_currency": "EUR"
 			},

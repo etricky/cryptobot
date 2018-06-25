@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 import org.springframework.core.io.ClassPathResource;
 
+import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFilesReader;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -44,6 +45,9 @@ public class Json {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (ExchangeException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 	}
 }

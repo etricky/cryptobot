@@ -1,6 +1,5 @@
 package com.etricky.cryptobot.core.interfaces.jsonFiles;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
@@ -8,6 +7,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
@@ -18,15 +18,17 @@ import lombok.extern.slf4j.Slf4j;
 public class JsonFiles {
 	ExchangeJson[] exchangesJson;
 	SlackJson slackJson;
+	SettingsJson settingsJson;
 	JsonFilesReader jsonReader;
 
-	public JsonFiles(JsonFilesReader jsonReader) throws JsonParseException, JsonMappingException, IOException {
+	public JsonFiles(JsonFilesReader jsonReader) throws JsonParseException, JsonMappingException, ExchangeException {
 		log.debug("start");
 
 		this.jsonReader = jsonReader;
 
 		exchangesJson = jsonReader.getJsonObject("exchanges.json", ExchangeJson[].class);
 		slackJson = jsonReader.getJsonObject("slack.key.json", SlackJson.class);
+		settingsJson = jsonReader.getJsonObject("settings.json", SettingsJson.class);
 
 		log.debug("done");
 	}
@@ -39,5 +41,9 @@ public class JsonFiles {
 
 	public SlackJson getSlackJson() {
 		return slackJson;
+	}
+
+	public SettingsJson getSettingsJson() {
+		return settingsJson;
 	}
 }

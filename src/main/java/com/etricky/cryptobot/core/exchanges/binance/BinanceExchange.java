@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.core.exchanges;
+package com.etricky.cryptobot.core.exchanges.binance;
 
 import org.springframework.stereotype.Component;
 

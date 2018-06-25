@@ -62,99 +62,112 @@ public class GdaxHistoryTrades {
 
 	}
 
-	public void processTradeHistory() throws IOException, InterruptedException, ExchangeException {
-		long endPeriod, startPeriod;
+	public void processTradeHistory() throws ExchangeException {
+		long endPeriod = 0, startPeriod = 0;
 		List<TradesEntity> gdaxTrades, tradesEntityList = new ArrayList<TradesEntity>();
 		TradesEntity lastTradeEntity = null, fakeTradeEntity;
 
 		log.debug("start");
 
-		endPeriod = DateFunctions.getNowToEvenMinute();
-		startPeriod = endPeriod - gdaxExchange.getThreadInfo().getExchangeEnum().getHistoryDays() * 86400;
+		do {
+			endPeriod = DateFunctions.getUnixTimeNowToEvenMinute();
 
-		log.debug("endPeriod: {}/{} startPeriod: {}/{}", endPeriod, DateFunctions.getStringFromUnixTime(endPeriod),
-				startPeriod, DateFunctions.getStringFromUnixTime(startPeriod));
+			if (startPeriod == 0) {
+				startPeriod = endPeriod - gdaxExchange.getThreadInfo().getExchangeEnum().getHistoryDays() * 86400;
+			} else {
+				// adjusts the start period so it won't search since the beginning of the trade
+				// history in the next iteration
+				startPeriod = endPeriod;
+				log.debug("setting startPeriod to endPeriod");
+			}
 
-		// TODO replace this by a method that returns the gaps and add a loop to fill
-		// them
-		Optional<List<TradeGapPeriod>> tradeGapsOpt = tradesData.getTradeGap(
-				gdaxExchange.getThreadInfo().getExchangeEnum().getName(),
-				gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), startPeriod, endPeriod);
+			log.debug("endPeriod: {}/{} startPeriod: {}/{}", endPeriod, DateFunctions.getStringFromUnixTime(endPeriod),
+					startPeriod, DateFunctions.getStringFromUnixTime(startPeriod));
 
-		if (tradeGapsOpt.isPresent()) {
-			List<TradeGapPeriod> tradeGapsList = tradeGapsOpt.get();
+			Optional<List<TradeGapPeriod>> tradeGapsOpt = tradesData.getTradeGap(
+					gdaxExchange.getThreadInfo().getExchangeEnum().getName(),
+					gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), startPeriod, endPeriod);
 
-			for (TradeGapPeriod tradeGapPeriod : tradeGapsList) {
+			if (tradeGapsOpt.isPresent()) {
+				List<TradeGapPeriod> tradeGapsList = tradeGapsOpt.get();
 
-				log.debug("gap start: {}/{} end: {}/{}", tradeGapPeriod.getStart(),
-						DateFunctions.getStringFromUnixTime(tradeGapPeriod.getStart()), tradeGapPeriod.getEnd(),
-						DateFunctions.getStringFromUnixTime(tradeGapPeriod.getEnd()));
+				log.debug("missing trades #: {}", tradeGapsList.size());
 
-				try {
+				for (TradeGapPeriod tradeGapPeriod : tradeGapsList) {
+
+					log.debug("gap start: {}/{} end: {}/{}", tradeGapPeriod.getStart(),
+							DateFunctions.getStringFromUnixTime(tradeGapPeriod.getStart()), tradeGapPeriod.getEnd(),
+							DateFunctions.getStringFromUnixTime(tradeGapPeriod.getEnd()));
 
 					List<GdaxTradePeriod> tradePeriods = getGdaxTradePeriods(tradeGapPeriod.getStart(),
 							tradeGapPeriod.getEnd());
 
-					for (GdaxTradePeriod gdaxTradePeriod : tradePeriods) {
-						exchangeLock.getLock(gdaxExchange.getThreadInfo().getExchangeEnum().getName());
+					try {
 
-						// besides ensuring that gdax rate limit is not reached, it also allows to stop
-						// the thread if it's interrupted
-						if (Thread.currentThread().isInterrupted()) {
-							log.debug("thread interrupted");
-							throw new ExchangeException("Thread interrupted");
-						}
-						log.debug("thread id: {}", Thread.currentThread().getId());
-						Thread.sleep(1000);
+						for (GdaxTradePeriod gdaxTradePeriod : tradePeriods) {
+							exchangeLock.getLock(gdaxExchange.getThreadInfo().getExchangeEnum().getName());
 
-						// Gdax returns the newest trade first
-						gdaxTrades = getGdaxHistoryTrades(gdaxTradePeriod.getStart(), gdaxTradePeriod.getEnd());
+							// besides ensuring that gdax rate limit is not reached, it also allows to stop
+							// the thread if it's interrupted
+							Thread.sleep(1000);
 
-						exchangeLock.releaseLock(gdaxExchange.getThreadInfo().getExchangeEnum().getName());
+							// Gdax returns the newest trade first
+							gdaxTrades = getGdaxHistoryTrades(gdaxTradePeriod.getStart(), gdaxTradePeriod.getEnd());
 
-						log.debug("got {} trades from gdax", gdaxTrades.size());
+							exchangeLock.releaseLock(gdaxExchange.getThreadInfo().getExchangeEnum().getName());
 
-						// Gdax returns the newest first so must reverse the list
-						Collections.reverse(gdaxTrades);
+							log.debug("got {} trades from gdax", gdaxTrades.size());
 
-						for (TradesEntity tradeEntity : gdaxTrades) {
-							// must store the trades in the database
-							log.debug("gdax trade: {}", tradeEntity);
+							// Gdax returns the newest first so must reverse the list
+							Collections.reverse(gdaxTrades);
 
-							if (lastTradeEntity != null) {
+							for (TradesEntity tradeEntity : gdaxTrades) {
+								// must store the trades in the database
+								log.debug("gdax trade: {}", tradeEntity);
 
-								while (lastTradeEntity.getTradeId().getUnixtime()
-										.longValue() != tradeEntity.getTradeId().getUnixtime().longValue() - 60) {
+								if (lastTradeEntity != null) {
 
-									log.debug("missing trade. current: {} last: {} #: {}",
-											tradeEntity.getTradeId().getUnixtime(),
-											lastTradeEntity.getTradeId().getUnixtime(),
-											(tradeEntity.getTradeId().getUnixtime()
-													- lastTradeEntity.getTradeId().getUnixtime()) / 60);
+									while (lastTradeEntity.getTradeId().getUnixtime()
+											.longValue() != tradeEntity.getTradeId().getUnixtime().longValue() - 60) {
 
-									// duplicates last
-									fakeTradeEntity = lastTradeEntity.getFake();
-									fakeTradeEntity.addMinute();
-									tradesEntityList.add(fakeTradeEntity);
-									lastTradeEntity = fakeTradeEntity;
+										log.debug("missing trade. current: {} last: {} #: {}",
+												tradeEntity.getTradeId().getUnixtime(),
+												lastTradeEntity.getTradeId().getUnixtime(),
+												(tradeEntity.getTradeId().getUnixtime()
+														- lastTradeEntity.getTradeId().getUnixtime()) / 60);
+
+										// duplicates last trade
+										fakeTradeEntity = lastTradeEntity.getFake().addMinute();
+										tradesEntityList.add(fakeTradeEntity);
+										lastTradeEntity = fakeTradeEntity;
+									}
 								}
+
+								log.debug("adding trade to be stored");
+								tradesEntityList.add(tradeEntity);
+								lastTradeEntity = tradeEntity;
 							}
 
-							log.debug("adding trade to be stored");
-							tradesEntityList.add(tradeEntity);
-							lastTradeEntity = tradeEntity;
+							log.debug("storing {} trades", tradesEntityList.size());
+							tradesData.getTradesEntityRepository().saveAll(tradesEntityList);
+							tradesEntityList.clear();
+
 						}
+					} catch (InterruptedException | IOException e) {
+						log.error("Exception: {}", e);
 
-						log.debug("storing {} trades", tradesEntityList.size());
-						tradesData.getTradesEntityRepository().saveAll(tradesEntityList);
-						tradesEntityList.clear();
+						throw new ExchangeException(e);
 
+					} finally {
+						// just to ensure the lock is released
+						exchangeLock.releaseLock(gdaxExchange.getThreadInfo().getExchangeEnum().getName());
 					}
-				} finally {
-					exchangeLock.releaseLock(gdaxExchange.getThreadInfo().getExchangeEnum().getName());
 				}
+			} else {
+				log.debug("no trades missing");
 			}
-		}
+
+		} while (DateFunctions.getUnixTimeNowToEvenMinute() - endPeriod > 60);
 
 		log.debug("done");
 
@@ -207,6 +220,7 @@ public class GdaxHistoryTrades {
 
 	public static List<GdaxTradePeriod> getGdaxTradePeriods(long startPeriod, long endPeriod) {
 		List<GdaxTradePeriod> tradePeriods = new ArrayList<GdaxTradePeriod>();
+
 		log.debug("start. startPeriod: {}/{} endPeriod: {}/{}", startPeriod,
 				DateFunctions.getStringFromUnixTime(startPeriod), endPeriod,
 				DateFunctions.getStringFromUnixTime(endPeriod));

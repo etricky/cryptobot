@@ -30,8 +30,13 @@ public class DateFunctions {
 		return ZonedDateTime.now(UTC);
 	}
 
-	public static long getNowUnixTime() {
+	public static long getUnixTimeNow() {
 		return ZonedDateTime.now(UTC).toEpochSecond();
+	}
+
+	public static long getUnixTimeNowToEvenMinute() {
+		long unixTime = getUnixTimeNow();
+		return getZDTfromUnixTime(unixTime).minusSeconds(getZDTfromUnixTime(unixTime).getSecond()).toEpochSecond();
 	}
 
 	public static String getStringFromZDT(ZonedDateTime zdt) {
@@ -42,8 +47,4 @@ public class DateFunctions {
 		return getStringFromZDT(getZDTfromUnixTime(unixTime));
 	}
 
-	public static long getNowToEvenMinute() {
-		long unixTime = getNowUnixTime();
-		return getZDTfromUnixTime(unixTime).minusSeconds(getZDTfromUnixTime(unixTime).getSecond()).toEpochSecond();
-	}
 }

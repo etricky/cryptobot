@@ -28,25 +28,39 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 		log.debug("start. threadInfo: {}", threadInfo);
 
 		this.threadInfo = threadInfo;
+		log.debug("thread: {}",Thread.currentThread().getId());
 
+		log.debug("done");
+	}
+	
+	protected void setThreadInfoData() {
+		log.debug("start");
+		
+		log.debug("thread: {}",Thread.currentThread().getId());
+		threadInfo.setThread(Thread.currentThread(), this);
+		
 		log.debug("done");
 	}
 
 	protected void stopTrade() {
 		log.debug("start");
 
-		if (subscription != null && !subscription.isDisposed()) {
-			subscription.dispose();
-			log.debug("subscription disposed");
-		}
+		try {
+			if (subscription != null && !subscription.isDisposed()) {
+				subscription.dispose();
+				log.debug("subscription disposed");
+			}
 
-		if (exchange != null && exchange.isAlive()) {
-			log.debug("disconnect");
-			// Disconnect from exchange (non-blocking)
-			exchange.disconnect().subscribe(() -> log.debug("Disconnected from exchange: {} currency: {}",
-					threadInfo.getExchangeEnum().getName(), threadInfo.getCurrencyEnum().getShortName()));
-		} else {
-			log.debug("exchange is not alive!");
+			if (exchange != null && exchange.isAlive()) {
+				log.debug("disconnect from exchange");
+				// Disconnect from exchange (non-blocking)
+				exchange.disconnect().subscribe(() -> log.debug("Disconnected from exchange: {} currency: {}",
+						threadInfo.getExchangeEnum().getName(), threadInfo.getCurrencyEnum().getShortName()));
+			} else {
+				log.debug("exchange is not alive!");
+			}
+		} catch (Exception e) {
+			log.error("Exception: {}",e);
 		}
 
 		exchangeThreads.removeThread(threadInfo);

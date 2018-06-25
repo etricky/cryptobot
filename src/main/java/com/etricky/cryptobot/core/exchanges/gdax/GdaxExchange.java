@@ -1,7 +1,5 @@
 package com.etricky.cryptobot.core.exchanges.gdax;
 
-import java.io.IOException;
-
 import javax.annotation.PostConstruct;
 
 import org.knowm.xchange.dto.marketdata.Trade;
@@ -35,7 +33,7 @@ public class GdaxExchange extends ExchangeGeneric {
 	}
 
 	@PostConstruct
-	private void initiateAuxBeans() {
+	private void initiateAuxiliarBeans() {
 		gdaxHistoryTrades.setGdaxExchange(this);
 		gdaxLiveTrade.setGdaxExchange(this);
 	}
@@ -45,7 +43,8 @@ public class GdaxExchange extends ExchangeGeneric {
 
 		if (firstRun) {
 			firstRun = false;
-			Thread.currentThread().setName(threadInfo.getThreadName() + "_S");
+			// for log purposes changes the name of the thread
+			Thread.currentThread().setName(threadInfo.getThreadName());
 		}
 
 		gdaxLiveTrade.processLiveTrade(trade);
@@ -54,43 +53,38 @@ public class GdaxExchange extends ExchangeGeneric {
 
 	}
 
-	private void startTrade() throws InterruptedException, ExchangeException {
+	private void startTrade() throws ExchangeException {
 		log.debug("start");
 
-		try {
-			// before getting any new trades it must fill the trade history
-			gdaxHistoryTrades.processTradeHistory();
+		// before getting any new trades it must fill the trade history
+		// gdaxHistoryTrades.processTradeHistory();
 
-			ProductSubscription productSubscription = ProductSubscription.create()
-					.addTrades(threadInfo.getCurrencyEnum().getCurrencyPair()).build();
+		ProductSubscription productSubscription = ProductSubscription.create()
+				.addTrades(threadInfo.getCurrencyEnum().getCurrencyPair()).build();
 
-			exchange = StreamingExchangeFactory.INSTANCE.createExchange(GDAXStreamingExchange.class.getName());
-			exchange.connect(productSubscription).blockingAwait();
+		exchange = StreamingExchangeFactory.INSTANCE.createExchange(GDAXStreamingExchange.class.getName());
+		exchange.connect(productSubscription).blockingAwait();
 
-			subscription = exchange.getStreamingMarketDataService()
-					.getTrades(threadInfo.getCurrencyEnum().getCurrencyPair()).subscribe(trade -> {
-						processTrade(trade);
-					}, throwable -> {
-						log.error("ERROR in getting trades: ", throwable);
-						stopTrade();
-						throw new ExchangeException(throwable);
-					});
+		subscription = exchange.getStreamingMarketDataService()
+				.getTrades(threadInfo.getCurrencyEnum().getCurrencyPair()).subscribe(trade -> {
+					processTrade(trade);
+				}, throwable -> {
+					log.error("ERROR in getting trades: ", throwable);
+					stopTrade();
+					throw new ExchangeException(throwable);
+				});
 
-			log.debug("done");
-		} catch (IOException e) {
-			log.error("Exception: {}", e);
-			stopTrade();
-			throw new ExchangeException(e);
-		}
+		log.debug("done");
 	}
 
 	@Override
 	public void run() {
 		log.debug("start");
-		log.debug("thread: {} id: {}", Thread.currentThread().getName(), Thread.currentThread().getId());
 
-		threadInfo.setThread(Thread.currentThread(), this);
 		try {
+			log.debug("thread: {}",Thread.currentThread().getId());
+			setThreadInfoData();
+			
 			startTrade();
 
 			shellCommands.sendMessage("Started thread: " + threadInfo.getThreadName(), true);

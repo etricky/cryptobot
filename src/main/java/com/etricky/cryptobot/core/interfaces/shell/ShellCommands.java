@@ -52,7 +52,7 @@ public class ShellCommands implements Quit.Command {
 
 		if (validateExchangeCurreny(exchange, currency)) {
 			sendMessage("Starting currency for exchange: " + exchange + " currency: " + currency, true);
-			exchangeThreads.startThread(exchange, currency);
+			exchangeThreads.startExchangeThreads(exchange, currency);
 		} else
 			log.debug("not a valid command");
 

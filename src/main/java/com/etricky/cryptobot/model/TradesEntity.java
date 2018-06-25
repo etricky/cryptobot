@@ -49,9 +49,10 @@ public class TradesEntity {
 				.build();
 	}
 
-	public void addMinute() {
+	public TradesEntity addMinute() {
 		tradeId.setUnixtime(tradeId.getUnixtime() + 60);
 		timestamp = DateFunctions.getZDTfromUnixTime(tradeId.getUnixtime());
 		log.debug("unixtime: {}/{}", tradeId.getUnixtime(), DateFunctions.getZDTfromUnixTime(tradeId.getUnixtime()));
+		return this;
 	}
 }

@@ -8,9 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ToString
 public enum CurrencyEnum {
-	BTC_EUR("btc_eur", "btc", "eur", CurrencyPair.BTC_EUR), ETH_EUR("eth_eur", "eth", "eur",
-			CurrencyPair.ETH_EUR), LTC_EUR("ltc_eur", "ltc", "eur",
-					CurrencyPair.XRP_EUR), XRP_EUR("xrp_eur", "xrp", "eur", CurrencyPair.XRP_EUR);
+	BTC_EUR("btc_eur", "btc", "eur", CurrencyPair.BTC_EUR), BTC_USD("btc_usd", "btc", "usd",
+			CurrencyPair.BTC_USD), ETH_EUR("eth_eur", "eth", "eur", CurrencyPair.ETH_EUR), LTC_EUR("ltc_eur", "ltc",
+					"eur", CurrencyPair.XRP_EUR), XRP_EUR("xrp_eur", "xrp", "eur", CurrencyPair.XRP_EUR);
 
 	String shortName;
 	String baseCurrency;
@@ -61,6 +61,8 @@ public enum CurrencyEnum {
 
 		if (shortName.equalsIgnoreCase(BTC_EUR.shortName)) {
 			return CurrencyEnum.BTC_EUR;
+		} else if (shortName.equalsIgnoreCase(BTC_USD.shortName)) {
+			return CurrencyEnum.BTC_USD;
 		} else if (shortName.equalsIgnoreCase(ETH_EUR.shortName)) {
 			return CurrencyEnum.ETH_EUR;
 		} else if (shortName.equalsIgnoreCase(LTC_EUR.shortName)) {

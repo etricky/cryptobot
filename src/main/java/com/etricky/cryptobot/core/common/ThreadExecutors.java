@@ -4,15 +4,15 @@ import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ThreadTaskExecutor {
+public class ThreadExecutors {
 	SimpleAsyncTaskExecutor executor;
 
-	public ThreadTaskExecutor() {
+	public ThreadExecutors() {
 		executor = new SimpleAsyncTaskExecutor();
 		executor.setConcurrencyLimit(SimpleAsyncTaskExecutor.UNBOUNDED_CONCURRENCY);
 	}
 
-	public void execute(Runnable thread) {
+	public void executeSingle(Runnable thread) {
 		executor.execute(thread);
 	}
 

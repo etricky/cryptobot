@@ -1,0 +1,4 @@
+{
+	"cleanOldRecords": "120",
+	"cleanCron": "0 0 0 * * *"
+}

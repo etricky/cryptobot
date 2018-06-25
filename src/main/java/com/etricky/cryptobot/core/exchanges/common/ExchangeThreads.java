@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-import com.etricky.cryptobot.core.common.ThreadTaskExecutor;
+import com.etricky.cryptobot.core.common.ThreadExecutors;
 import com.etricky.cryptobot.core.interfaces.shell.ShellCommands;
 
 import lombok.extern.slf4j.Slf4j;
@@ -23,13 +23,13 @@ public class ExchangeThreads {
 	private ApplicationContext appContext;
 
 	@Autowired
-	private ThreadTaskExecutor threadExecutor;
+	private ThreadExecutors threadExecutor;
 
 	private String threadName;
 
 	static HashMap<String, ExchangeGeneric> threadsMap = new HashMap<>();
 
-	public void startThread(String exchange, String currency)
+	public void startExchangeThreads(String exchange, String currency)
 			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 		log.debug("start. exchange: {} currency: {}", exchange, currency);
 
@@ -50,7 +50,7 @@ public class ExchangeThreads {
 			ThreadInfo threadInfo = new ThreadInfo(exchangeEnum, currencyEnum, exchangeGeneric, threadName);
 			exchangeGeneric.setThreadInfo(threadInfo);
 
-			threadExecutor.execute(exchangeGeneric);
+			threadExecutor.executeSingle(exchangeGeneric);
 
 			threadsMap.put(threadName, exchangeGeneric);
 		}

@@ -3,8 +3,10 @@ package com.etricky.cryptobot.repositories;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.etricky.cryptobot.model.TradesEntity;
 import com.etricky.cryptobot.model.TradesPK;
@@ -37,5 +39,10 @@ public interface TradesEntityRepository extends CrudRepository<TradesEntity, Tra
 			+ "FROM (SELECT UNIXTIME + 60 AS start_gap FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME < ?4 AND NOT EXISTS (SELECT NULL "
 			+ "FROM TRADES t2 WHERE t1.UNIXTIME + 60 = t2.UNIXTIME AND EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3)) AS trades2 ORDER BY start_gap ASC", nativeQuery = true)
 	Optional<List<Object[]>> getGaps(String exchange, String currency, long startDataUnixTime, long endDataUnixTime);
+
+	@Modifying
+	@Transactional
+	@Query(value = "DELETE FROM TRADES WHERE UNIXTIME < ?1", nativeQuery = true)
+	int deleteOldRecords(long unixTime);
 
 }
