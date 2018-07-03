@@ -3,24 +3,31 @@ package com.etricky.cryptobot.core.exchanges.common;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.ThreadExecutors;
-import com.etricky.cryptobot.core.interfaces.shell.ShellCommands;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
 public class ExchangeThreads {
-	@Autowired
-	private ShellCommands shellCommands;
+	public final static int EXCHANGE_INVALID = 1;
+	public final static int CURRENCY_INVALID = 2;
+	public final static int EXCHANGE_CURRENCY_PAIR_INVALID = 3;
+	public final static int NO_CONFIG_EXCHANGE = 4;
 
 	@Autowired
 	private ApplicationContext appContext;
+	
+	@Autowired
+	JsonFiles jsonFiles;
 
 	@Autowired
 	private ThreadExecutors threadExecutor;
@@ -29,7 +36,7 @@ public class ExchangeThreads {
 
 	static HashMap<String, ExchangeGeneric> threadsMap = new HashMap<>();
 
-	public void startExchangeThreads(String exchange, String currency)
+	public int startExchangeThreads(String exchange, String currency)
 			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 		log.debug("start. exchange: {} currency: {}", exchange, currency);
 
@@ -38,7 +45,7 @@ public class ExchangeThreads {
 		// validates if the thread already exists
 		if (threadsMap.containsKey(threadName)) {
 			log.debug("thread alraedy exists");
-			shellCommands.sendMessage("Thread already exist", true);
+			return 1;
 		} else {
 			ExchangeEnum exchangeEnum = ExchangeEnum.getInstanceByName(exchange);
 			CurrencyEnum currencyEnum = CurrencyEnum.getInstanceByShortName(currency);
@@ -55,7 +62,7 @@ public class ExchangeThreads {
 			threadsMap.put(threadName, exchangeGeneric);
 		}
 		log.debug("done");
-
+		return 0;
 	}
 
 	public HashMap<String, List<String>> getRunningThreads() {
@@ -81,20 +88,22 @@ public class ExchangeThreads {
 		return threadName;
 	}
 
-	public void stopThread(String exchange, String currency) {
+	public int stopThread(String exchange, String currency) {
 		log.debug("start. exchange: {} currency: {}", exchange, currency);
-		
+
 		setThreadName(exchange, currency);
 
 		if (threadsMap.containsKey(threadName)) {
-			log.debug("found thread: {} id: {}, sending interrupt", threadName,threadsMap.get(threadName).getThreadInfo().getThread().getId());
+			log.debug("found thread: {} id: {}, sending interrupt", threadName,
+					threadsMap.get(threadName).getThreadInfo().getThread().getId());
 			threadsMap.get(threadName).getThreadInfo().interrupt();
 		} else {
 			log.debug("no thread {} found", threadName);
-			shellCommands.sendMessage("no thread " + threadName + " found", true);
+			return 1;
 		}
 
 		log.debug("done");
+		return 0;
 	}
 
 	public void stopAllThreads() {
@@ -122,5 +131,36 @@ public class ExchangeThreads {
 			log.debug("thread does not exist");
 
 		log.debug("done");
+	}
+
+	public String getThreadName(String exchange, String currency) {
+		setThreadName(exchange, currency);
+		return threadName;
+	}
+
+	public int validateExchangeCurreny(String exchange, String currency) {
+		int result = 0;
+		log.debug("start. exchange: {} currency: {}", exchange, currency);
+
+		if (ExchangeEnum.getInstanceByName(exchange) == null) {
+			result = EXCHANGE_INVALID;
+		}
+
+		if (CurrencyEnum.getInstanceByShortName(currency) == null) {
+			result = CURRENCY_INVALID;
+		}
+
+		// checks if the currency is valid for the exchange
+		Map<String, ExchangeJson> exchangeJson = jsonFiles.getExchangesJson();
+		if (exchangeJson.containsKey(exchange.toUpperCase())) {
+			if (!exchangeJson.get(exchange.toUpperCase()).getCurrenciesMap().containsKey(currency.toUpperCase())) {
+				result = EXCHANGE_CURRENCY_PAIR_INVALID;
+			}
+		} else {
+			result = NO_CONFIG_EXCHANGE;
+		}
+
+		log.debug("done. result=: {}", result);
+		return result;
 	}
 }

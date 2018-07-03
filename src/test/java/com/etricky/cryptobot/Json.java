@@ -28,7 +28,7 @@ public class Json {
 
 			Arrays.asList(exchanges).forEach(e -> {
 				System.out.println("name:" + e.getName());
-				Arrays.asList(e.getCurrencies()).forEach(c -> {
+				e.getCurrencies().forEach(c -> {
 					System.out.println("base:" + c.getBase_currency());
 					System.out.println("quote:" + c.getQuote_currency());
 				});

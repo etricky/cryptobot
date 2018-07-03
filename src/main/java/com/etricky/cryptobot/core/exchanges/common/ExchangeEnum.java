@@ -1,46 +1,21 @@
 package com.etricky.cryptobot.core.exchanges.common;
 
+import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ToString
+@Getter
 public enum ExchangeEnum {
-	GDAX("gdax", "gdaxExchange", 120), BITSTAMP("bitstamp", "bitstampExchange", 1), BINANCE("binance",
-			"binanceExchange", 1);
+	GDAX("GDAX", "gdaxExchange"), BITSTAMP("BITSTAMP", "bitstampExchange"), BINANCE("BINANCE", "binanceExchange");
 
 	private String name;
-	private int historyDays;
 	private String crytobotBean;
 
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public int getHistoryDays() {
-		return historyDays;
-	}
-
-	public void setHistoryDays(int historyDays) {
-		this.historyDays = historyDays;
-	}
-
-	public String getCrytobotBean() {
-		return crytobotBean;
-	}
-
-	public void setCrytobotBean(String crytobotClass) {
-		this.crytobotBean = crytobotClass;
-	}
-
-	private ExchangeEnum(String name, String crytobotBean, int historyDays) {
+	private ExchangeEnum(String name, String crytobotBean) {
 		this.name = name;
 		this.crytobotBean = crytobotBean;
-		this.historyDays = historyDays;
 	}
 
 	public static ExchangeEnum getInstanceByName(String name) {

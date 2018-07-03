@@ -2,52 +2,22 @@ package com.etricky.cryptobot.core.exchanges.common;
 
 import org.knowm.xchange.currency.CurrencyPair;
 
+import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ToString
+@Getter
 public enum CurrencyEnum {
-	BTC_EUR("btc_eur", "btc", "eur", CurrencyPair.BTC_EUR), BTC_USD("btc_usd", "btc", "usd",
-			CurrencyPair.BTC_USD), ETH_EUR("eth_eur", "eth", "eur", CurrencyPair.ETH_EUR), LTC_EUR("ltc_eur", "ltc",
-					"eur", CurrencyPair.XRP_EUR), XRP_EUR("xrp_eur", "xrp", "eur", CurrencyPair.XRP_EUR);
+	BTC_EUR("BTC_EUR", "BTC", "EUR", CurrencyPair.BTC_EUR), BTC_USD("BTC_USD", "BTC", "USD",
+			CurrencyPair.BTC_USD), ETH_EUR("ETH_EUR", "ETH", "EUR", CurrencyPair.ETH_EUR), LTC_EUR("LTC_EUR", "LTC",
+					"EUR", CurrencyPair.XRP_EUR), XRP_EUR("XRP_EUR", "XRP", "EUR", CurrencyPair.XRP_EUR);
 
 	String shortName;
 	String baseCurrency;
 	String quoteCurrency;
 	CurrencyPair currencyPair;
-
-	public String getShortName() {
-		return shortName;
-	}
-
-	public void setShortName(String shortName) {
-		this.shortName = shortName;
-	}
-
-	public String getBaseCurrency() {
-		return baseCurrency;
-	}
-
-	public void setBaseCurrency(String baseCurrency) {
-		this.baseCurrency = baseCurrency;
-	}
-
-	public String getQuoteCurrency() {
-		return quoteCurrency;
-	}
-
-	public void setQuoteCurrency(String quoteCurrency) {
-		this.quoteCurrency = quoteCurrency;
-	}
-
-	public CurrencyPair getCurrencyPair() {
-		return currencyPair;
-	}
-
-	public void setCurrencyPair(CurrencyPair currencyPair) {
-		this.currencyPair = currencyPair;
-	}
 
 	private CurrencyEnum(String shortName, String baseCurrency, String quoteCurrency, CurrencyPair currencyPair) {
 		this.shortName = shortName;

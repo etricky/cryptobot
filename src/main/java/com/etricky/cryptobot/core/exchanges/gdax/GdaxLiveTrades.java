@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.model.TradesEntity;
-import com.etricky.cryptobot.model.TradesPK;
+import com.etricky.cryptobot.model.ExchangePK;
 import com.etricky.cryptobot.repositories.TradesData;
 
 import lombok.NonNull;
@@ -83,6 +83,12 @@ public class GdaxLiveTrades {
 
 		tradesData.getTradesEntityRepository().save(tradeEntity);
 
+		if (!tradeEntity.isFakeTrade()) {
+			gdaxExchange.processStrategyTrade(tradeEntity);
+		} else {
+			log.debug("fake trade, not adding to timeseries");
+		}
+
 		log.debug("done");
 	}
 
@@ -112,7 +118,7 @@ public class GdaxLiveTrades {
 
 		lastTradeEntity = TradesEntity.builder().openPrice(trade.getPrice()).closePrice(trade.getPrice())
 				.lowPrice(trade.getPrice()).highPrice(trade.getPrice()).timestamp(DateFunctions.getZDTfromUnixTime(now))
-				.tradeId(TradesPK.builder().currency(gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName())
+				.tradeId(ExchangePK.builder().currency(gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName())
 						.exchange(gdaxExchange.getThreadInfo().getExchangeEnum().getName()).unixtime(now).build())
 				.build();
 

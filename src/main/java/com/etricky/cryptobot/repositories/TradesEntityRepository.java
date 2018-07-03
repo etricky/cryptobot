@@ -9,9 +9,9 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.etricky.cryptobot.model.TradesEntity;
-import com.etricky.cryptobot.model.TradesPK;
+import com.etricky.cryptobot.model.ExchangePK;
 
-public interface TradesEntityRepository extends CrudRepository<TradesEntity, TradesPK> {
+public interface TradesEntityRepository extends CrudRepository<TradesEntity, ExchangePK> {
 
 	/**
 	 * Returns the first and last entries in the database. If no data then returns 0
@@ -40,9 +40,27 @@ public interface TradesEntityRepository extends CrudRepository<TradesEntity, Tra
 			+ "FROM TRADES t2 WHERE t1.UNIXTIME + 60 = t2.UNIXTIME AND EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3)) AS trades2 ORDER BY start_gap ASC", nativeQuery = true)
 	Optional<List<Object[]>> getGaps(String exchange, String currency, long startDataUnixTime, long endDataUnixTime);
 
+	/**
+	 * Deletes all records that are older than unixTime
+	 * 
+	 * @param unixTime
+	 * @return Number of records deleted
+	 */
 	@Modifying
 	@Transactional
 	@Query(value = "DELETE FROM TRADES WHERE UNIXTIME < ?1", nativeQuery = true)
 	int deleteOldRecords(long unixTime);
 
+	/**
+	 * Returns all trades in the specified period
+	 * 
+	 * @param exchange
+	 * @param currency
+	 * @param startDataUnixTime
+	 * @param endDataUnixTime
+	 * @return
+	 */
+	@Query(value = "SELECT * FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME <= ?4 AND FAKE_TRADE = FALSE", nativeQuery = true)
+	List<TradesEntity> getAllTradesInPeriod(String exchange, String currency, long startDataUnixTime,
+			long endDataUnixTime);
 }

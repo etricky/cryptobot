@@ -1,6 +1,7 @@
 [
 	{
 		"name": "GDAX",
+		"historyDays": 120,
 		"currencies": [
 			{
 				"base_currency": "BTC",
@@ -18,14 +19,51 @@
 				"base_currency": "LTC",
 				"quote_currency": "EUR"
 			}
+		],
+		"strategies": [
+			{
+				"bean": "TrailngStopLoss",
+				"barDurationSec": 60,
+				"timeSeriesBars": 30,
+				"lossPerc": 2.5,
+				"gainPercentage": 3,
+				"fee": "0.3"
+			},
+			{
+				"bean": "Trading",
+				"barDurationSec": 3600,
+				"timeSeriesBars": 30,
+				"lossPerc": null,
+				"gainPercentage": 3,
+				"fee": "0.3"
+			}
 		]
 	},
 	{
 		"name": "BITSTAMP",
+		"historyDays": 1,
 		"currencies": [
 			{
 				"base_currency": "XRP",
 				"quote_currency": "EUR"
+			}
+		],
+		"strategies": [
+			{
+				"bean": "BitStampStopLoss",
+				"barDurationSec": 60,
+				"timeSeriesBars": 30,
+				"lossPerc": 2.5,
+				"gainPercentage": 3,
+				"fee": "0.3"
+			},
+			{
+				"bean": "BitStampTrading",
+				"barDurationSec": 3600,
+				"timeSeriesBars": 30,
+				"lossPerc": null,
+				"gainPercentage": 3,
+				"fee": "0.3"
 			}
 		]
 	}

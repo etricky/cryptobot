@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
+import com.etricky.cryptobot.model.TradesEntity;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -48,7 +49,7 @@ public class TradesData {
 		tradeGapList.add(TradeGapPeriod.builder().start(start).end(end).build());
 	}
 
-	public Optional<List<TradeGapPeriod>> getTradeGap(String exchange, String currency, long startPeriod,
+	public Optional<List<TradeGapPeriod>> getTradeGaps(String exchange, String currency, long startPeriod,
 			long endPeriod) {
 		long dataStartPeriod = 0, dataEndPeriod = 0;
 
@@ -96,5 +97,17 @@ public class TradesData {
 
 		log.debug("done");
 		return Optional.ofNullable(tradeGapList);
+	}
+
+	public List<TradesEntity> getAllTrades(String exchange, String currency, long startPeriod, long endPeriod) {
+		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{}", exchange, currency,
+				startPeriod, DateFunctions.getStringFromUnixTime(startPeriod), endPeriod,
+				DateFunctions.getStringFromUnixTime(endPeriod));
+
+		List<TradesEntity> tradesList = tradesEntityRepository.getAllTradesInPeriod(exchange, currency, startPeriod,
+				endPeriod);
+
+		log.debug("done");
+		return tradesList;
 	}
 }

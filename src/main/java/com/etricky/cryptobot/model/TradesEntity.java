@@ -27,7 +27,7 @@ public class TradesEntity {
 
 	@EmbeddedId
 	@NonNull
-	private TradesPK tradeId;
+	private ExchangePK tradeId;
 	@NonNull
 	private BigDecimal openPrice;
 	@NonNull
@@ -44,7 +44,7 @@ public class TradesEntity {
 	public TradesEntity getFake() {
 		return TradesEntity.builder().fakeTrade(true).closePrice(closePrice).openPrice(openPrice).highPrice(highPrice)
 				.lowPrice(lowPrice).timestamp(DateFunctions.getZDTfromUnixTime(tradeId.getUnixtime()))
-				.tradeId(TradesPK.builder().currency(tradeId.getCurrency()).exchange(tradeId.getExchange())
+				.tradeId(ExchangePK.builder().currency(tradeId.getCurrency()).exchange(tradeId.getExchange())
 						.unixtime(tradeId.getUnixtime()).build())
 				.build();
 	}

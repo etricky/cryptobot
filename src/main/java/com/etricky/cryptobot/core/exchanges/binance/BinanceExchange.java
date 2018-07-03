@@ -4,8 +4,8 @@ import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.exchanges.common.ExchangeGeneric;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeThreads;
-import com.etricky.cryptobot.core.interfaces.shell.ShellCommands;
-import com.etricky.cryptobot.repositories.TradesEntityRepository;
+import com.etricky.cryptobot.core.interfaces.Commands;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -13,9 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class BinanceExchange extends ExchangeGeneric {
 
-	public BinanceExchange(ExchangeThreads exchangeThreads, ShellCommands shellCommands,
-			TradesEntityRepository tradesEntityRepository) {
-		super(exchangeThreads, shellCommands);
+	public BinanceExchange(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles) {
+		super(exchangeThreads, commands, jsonFiles);
 	}
 
 	private void startTrade() {

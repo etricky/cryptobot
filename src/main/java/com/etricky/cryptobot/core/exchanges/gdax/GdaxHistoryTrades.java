@@ -20,8 +20,9 @@ import org.springframework.stereotype.Component;
 import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeLock;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.model.TradesEntity;
-import com.etricky.cryptobot.model.TradesPK;
+import com.etricky.cryptobot.model.ExchangePK;
 import com.etricky.cryptobot.repositories.TradesData;
 import com.etricky.cryptobot.repositories.TradesData.TradeGapPeriod;
 
@@ -43,6 +44,9 @@ public class GdaxHistoryTrades {
 
 	@Autowired
 	private TradesData tradesData;
+
+	@Autowired
+	private ExchangeJson exchangeJson;
 
 	public void setGdaxExchange(GdaxExchange gdaxExchange) {
 		this.gdaxExchange = gdaxExchange;
@@ -73,7 +77,7 @@ public class GdaxHistoryTrades {
 			endPeriod = DateFunctions.getUnixTimeNowToEvenMinute();
 
 			if (startPeriod == 0) {
-				startPeriod = endPeriod - gdaxExchange.getThreadInfo().getExchangeEnum().getHistoryDays() * 86400;
+				startPeriod = endPeriod - exchangeJson.getHistoryDays() * 86400;
 			} else {
 				// adjusts the start period so it won't search since the beginning of the trade
 				// history in the next iteration
@@ -84,7 +88,7 @@ public class GdaxHistoryTrades {
 			log.debug("endPeriod: {}/{} startPeriod: {}/{}", endPeriod, DateFunctions.getStringFromUnixTime(endPeriod),
 					startPeriod, DateFunctions.getStringFromUnixTime(startPeriod));
 
-			Optional<List<TradeGapPeriod>> tradeGapsOpt = tradesData.getTradeGap(
+			Optional<List<TradeGapPeriod>> tradeGapsOpt = tradesData.getTradeGaps(
 					gdaxExchange.getThreadInfo().getExchangeEnum().getName(),
 					gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), startPeriod, endPeriod);
 
@@ -150,8 +154,14 @@ public class GdaxHistoryTrades {
 
 							log.debug("storing {} trades", tradesEntityList.size());
 							tradesData.getTradesEntityRepository().saveAll(tradesEntityList);
-							tradesEntityList.clear();
 
+							tradesEntityList.forEach(trade -> {
+								if (!trade.isFakeTrade()) {
+									gdaxExchange.addTradeToTimeSeries(trade);
+								}
+							});
+
+							tradesEntityList.clear();
 						}
 					} catch (InterruptedException | IOException e) {
 						log.error("Exception: {}", e);
@@ -165,6 +175,16 @@ public class GdaxHistoryTrades {
 				}
 			} else {
 				log.debug("no trades missing");
+				tradesEntityList = tradesData.getAllTrades(gdaxExchange.getThreadInfo().getExchangeEnum().getName(),
+						gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), startPeriod, endPeriod);
+
+				tradesEntityList.forEach(trade -> {
+					if (!trade.isFakeTrade()) {
+						gdaxExchange.addTradeToTimeSeries(trade);
+					} else {
+						log.debug("fake trade, not adding to timeseries");
+					}
+				});
 			}
 
 		} while (DateFunctions.getUnixTimeNowToEvenMinute() - endPeriod > 60);
@@ -208,7 +228,7 @@ public class GdaxHistoryTrades {
 		TradesEntity tradeEntity = TradesEntity.builder().openPrice(candle.getOpen()).closePrice(candle.getClose())
 				.lowPrice(candle.getLow()).highPrice(candle.getHigh())
 				.timestamp(DateFunctions.getZDTFromDate(candle.getTime()))
-				.tradeId(TradesPK.builder().currency(gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName())
+				.tradeId(ExchangePK.builder().currency(gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName())
 						.exchange(gdaxExchange.getThreadInfo().getExchangeEnum().getName())
 						.unixtime(DateFunctions.getUnixTimeFromdDate(candle.getTime())).build())
 				.build();

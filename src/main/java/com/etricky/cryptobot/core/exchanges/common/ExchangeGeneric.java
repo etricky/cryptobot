@@ -1,8 +1,12 @@
 package com.etricky.cryptobot.core.exchanges.common;
 
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.List;
 
-import com.etricky.cryptobot.core.interfaces.shell.ShellCommands;
+import com.etricky.cryptobot.core.interfaces.Commands;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
+import com.etricky.cryptobot.core.strategies.common.StrategyGeneric;
+import com.etricky.cryptobot.model.TradesEntity;
 
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.disposables.Disposable;
@@ -17,28 +21,32 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 	protected Disposable subscription;
 	protected StreamingExchange exchange;
 	protected ExchangeThreads exchangeThreads;
-	protected ShellCommands shellCommands;
+	protected Commands commands;
+	protected JsonFiles jsonFiles;
+	@Getter
+	protected List<StrategyGeneric> strategies;
 
-	public ExchangeGeneric(ExchangeThreads exchangeThreads, ShellCommands shellCommands) {
+	public ExchangeGeneric(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles) {
 		this.exchangeThreads = exchangeThreads;
-		this.shellCommands = shellCommands;
+		this.commands = commands;
+		this.jsonFiles = jsonFiles;
 	}
 
 	public void setThreadInfo(ThreadInfo threadInfo) {
 		log.debug("start. threadInfo: {}", threadInfo);
 
 		this.threadInfo = threadInfo;
-		log.debug("thread: {}",Thread.currentThread().getId());
+		log.debug("thread: {}", Thread.currentThread().getId());
 
 		log.debug("done");
 	}
-	
+
 	protected void setThreadInfoData() {
 		log.debug("start");
-		
-		log.debug("thread: {}",Thread.currentThread().getId());
+
+		log.debug("thread: {}", Thread.currentThread().getId());
 		threadInfo.setThread(Thread.currentThread(), this);
-		
+
 		log.debug("done");
 	}
 
@@ -60,12 +68,12 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 				log.debug("exchange is not alive!");
 			}
 		} catch (Exception e) {
-			log.error("Exception: {}",e);
+			log.error("Exception: {}", e);
 		}
 
 		exchangeThreads.removeThread(threadInfo);
 
-		shellCommands.sendMessage("Stopped thread: " + threadInfo.getThreadName(), true);
+		commands.sendMessage("Stopped thread: " + threadInfo.getThreadName(), true);
 
 		log.debug("done");
 	}
@@ -83,6 +91,22 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 
 		// in case the interrupt hasn't stopped the thread
 		stopTrade();
+
+		log.debug("done");
+	}
+
+	public void processStrategyTrade(TradesEntity tradesEntity) {
+		log.debug("start");
+
+		strategies.forEach(s -> s.processLiveTrade(tradesEntity));
+
+		log.debug("done");
+	}
+
+	public void addTradeToTimeSeries(TradesEntity tradesEntity) {
+		log.debug("start");
+
+		strategies.forEach(s -> s.addTradeToTimeSeries(tradesEntity));
 
 		log.debug("done");
 	}

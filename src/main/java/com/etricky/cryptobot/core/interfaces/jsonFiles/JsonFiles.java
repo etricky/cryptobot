@@ -25,10 +25,7 @@ public class JsonFiles {
 		log.debug("start");
 
 		this.jsonReader = jsonReader;
-
-		exchangesJson = jsonReader.getJsonObject("exchanges.json", ExchangeJson[].class);
-		slackJson = jsonReader.getJsonObject("slack.key.json", SlackJson.class);
-		settingsJson = jsonReader.getJsonObject("settings.json", SettingsJson.class);
+		loadFiles();
 
 		log.debug("done");
 	}
@@ -45,5 +42,15 @@ public class JsonFiles {
 
 	public SettingsJson getSettingsJson() {
 		return settingsJson;
+	}
+
+	public void loadFiles() throws JsonParseException, JsonMappingException, ExchangeException {
+		log.debug("start");
+
+		exchangesJson = jsonReader.getJsonObject("exchanges.json", ExchangeJson[].class);
+		slackJson = jsonReader.getJsonObject("slack.key.json", SlackJson.class);
+		settingsJson = jsonReader.getJsonObject("settings.json", SettingsJson.class);
+
+		log.debug("done");
 	}
 }

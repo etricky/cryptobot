@@ -15,7 +15,7 @@ import lombok.NonNull;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class TradesPK implements Serializable {
+public class ExchangePK implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
