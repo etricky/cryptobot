@@ -13,7 +13,6 @@ import com.etricky.cryptobot.CryptoBotApplication;
 import com.etricky.cryptobot.core.common.ExitCode;
 import com.etricky.cryptobot.core.exchanges.common.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeEnum;
-import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;

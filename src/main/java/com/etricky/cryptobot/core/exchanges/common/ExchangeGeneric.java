@@ -1,11 +1,10 @@
 package com.etricky.cryptobot.core.exchanges.common;
 
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.util.List;
 
 import com.etricky.cryptobot.core.interfaces.Commands;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
-import com.etricky.cryptobot.core.strategies.common.StrategyGeneric;
+import com.etricky.cryptobot.core.strategies.common.ExchangeStrategy;
 import com.etricky.cryptobot.model.TradesEntity;
 
 import info.bitrich.xchangestream.core.StreamingExchange;
@@ -23,8 +22,7 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 	protected ExchangeThreads exchangeThreads;
 	protected Commands commands;
 	protected JsonFiles jsonFiles;
-	@Getter
-	protected List<StrategyGeneric> strategies;
+	protected ExchangeStrategy exchangeStrategy;
 
 	public ExchangeGeneric(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles) {
 		this.exchangeThreads = exchangeThreads;
@@ -62,8 +60,8 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 			if (exchange != null && exchange.isAlive()) {
 				log.debug("disconnect from exchange");
 				// Disconnect from exchange (non-blocking)
-				exchange.disconnect().subscribe(() -> log.debug("Disconnected from exchange: {} currency: {}",
-						threadInfo.getExchangeEnum().getName(), threadInfo.getCurrencyEnum().getShortName()));
+				exchange.disconnect().subscribe(() -> log.debug("Disconnected from exchange: {} currency: {}", threadInfo.getExchangeEnum().getName(),
+						threadInfo.getCurrencyEnum().getShortName()));
 			} else {
 				log.debug("exchange is not alive!");
 			}
@@ -98,7 +96,7 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 	public void processStrategyTrade(TradesEntity tradesEntity) {
 		log.debug("start");
 
-		strategies.forEach(s -> s.processLiveTrade(tradesEntity));
+		exchangeStrategy.processLiveTrade(tradesEntity);
 
 		log.debug("done");
 	}
@@ -106,7 +104,7 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 	public void addTradeToTimeSeries(TradesEntity tradesEntity) {
 		log.debug("start");
 
-		strategies.forEach(s -> s.addTradeToTimeSeries(tradesEntity));
+		exchangeStrategy.addTradeToTimeSeries(tradesEntity);
 
 		log.debug("done");
 	}
