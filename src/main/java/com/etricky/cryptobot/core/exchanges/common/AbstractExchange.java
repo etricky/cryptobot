@@ -13,7 +13,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHandler {
+public abstract class AbstractExchange implements Runnable, UncaughtExceptionHandler {
 
 	@Getter
 	protected ThreadInfo threadInfo;
@@ -24,10 +24,11 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 	protected JsonFiles jsonFiles;
 	protected ExchangeStrategy exchangeStrategy;
 
-	public ExchangeGeneric(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles) {
+	public AbstractExchange(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles, ExchangeStrategy exchangeStrategy) {
 		this.exchangeThreads = exchangeThreads;
 		this.commands = commands;
 		this.jsonFiles = jsonFiles;
+		this.exchangeStrategy = exchangeStrategy;
 	}
 
 	public void setThreadInfo(ThreadInfo threadInfo) {
@@ -93,18 +94,18 @@ public abstract class ExchangeGeneric implements Runnable, UncaughtExceptionHand
 		log.debug("done");
 	}
 
-	public void processStrategyTrade(TradesEntity tradesEntity) {
+	public void processStrategyForLiveTrade(TradesEntity tradesEntity) throws ExchangeException {
 		log.debug("start");
 
-		exchangeStrategy.processLiveTrade(tradesEntity);
+		exchangeStrategy.processStrategyForLiveTrade(tradesEntity);
 
 		log.debug("done");
 	}
 
-	public void addTradeToTimeSeries(TradesEntity tradesEntity) {
+	public void addHistoryTradeToTimeSeries(TradesEntity tradesEntity) throws ExchangeException {
 		log.debug("start");
 
-		exchangeStrategy.addTradeToTimeSeries(tradesEntity);
+		exchangeStrategy.addHistoryTradeToTimeSeries(tradesEntity);
 
 		log.debug("done");
 	}

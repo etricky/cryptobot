@@ -6,7 +6,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExitCode implements ExitCodeGenerator {
 
-	int exitCode = -1;
+	public static final int EXIT_CODE_ERROR = -1;
+	int exitCode = EXIT_CODE_ERROR;
 
 	@Override
 	public int getExitCode() {

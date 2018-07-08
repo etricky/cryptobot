@@ -87,7 +87,7 @@ public class Commands {
 		log.debug("done");
 	}
 
-	public void quitExchangeCurrency() throws IOException {
+	public void quitApplication() throws IOException {
 		log.debug("start");
 
 		sendMessage("Shutting down CryptoBot!!!", true);

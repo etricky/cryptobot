@@ -26,7 +26,7 @@ public class DateFunctions {
 		return ZonedDateTime.ofInstant(date.toInstant(), UTC);
 	}
 
-	public static ZonedDateTime getNowZDT() {
+	public static ZonedDateTime getZDTNow() {
 		return ZonedDateTime.now(UTC);
 	}
 

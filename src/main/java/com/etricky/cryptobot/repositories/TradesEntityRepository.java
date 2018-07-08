@@ -61,6 +61,6 @@ public interface TradesEntityRepository extends CrudRepository<TradesEntity, Exc
 	 * @return
 	 */
 	@Query(value = "SELECT * FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME <= ?4 AND FAKE_TRADE = FALSE", nativeQuery = true)
-	List<TradesEntity> getAllTradesInPeriod(String exchange, String currency, long startDataUnixTime,
+	List<TradesEntity> getTradesInPeriod(String exchange, String currency, long startDataUnixTime,
 			long endDataUnixTime);
 }

@@ -5,8 +5,10 @@ import java.io.IOException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.event.ApplicationFailedEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -21,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CryptoBotApplication {
 
+	private static ConfigurableApplicationContext ctx;
 	@Autowired
 	Slack slack;
 
@@ -30,7 +33,7 @@ public class CryptoBotApplication {
 	public static void main(String[] args) {
 		// SpringApplication app = new SpringApplication(CryptoBotApplication.class);
 
-		ConfigurableApplicationContext ctx = SpringApplication.run(CryptoBotApplication.class, args);
+		ctx = SpringApplication.run(CryptoBotApplication.class, args);
 		ctx.registerShutdownHook();
 	}
 
@@ -43,5 +46,18 @@ public class CryptoBotApplication {
 
 		log.debug("Exited CryptoBot!!!");
 		System.exit(exitCode.getExitCode());
+	}
+
+	@EventListener(ApplicationFailedEvent.class)
+	public void applicationFailedEvent() {
+		log.debug("start");
+		try {
+			ExitCode ex = new ExitCode();
+			ex.setExitCode(ExitCode.EXIT_CODE_ERROR);
+			terminate(ex);
+		} catch (IOException e) {
+			log.error("Exception: {}", e);
+		}
+		ctx.close();
 	}
 }

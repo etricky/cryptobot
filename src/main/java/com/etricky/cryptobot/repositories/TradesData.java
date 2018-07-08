@@ -41,7 +41,7 @@ public class TradesData {
 
 	}
 
-	private List<TradeGapPeriod> tradeGapList = new ArrayList<>();
+	private List<TradeGapPeriod> tradeGapList;
 
 	private void addGapToList(long start, long end) {
 		log.debug("adding gap start: {}/{} end: {}/{}", start, DateFunctions.getStringFromUnixTime(start), end,
@@ -49,13 +49,14 @@ public class TradesData {
 		tradeGapList.add(TradeGapPeriod.builder().start(start).end(end).build());
 	}
 
-	public Optional<List<TradeGapPeriod>> getTradeGaps(String exchange, String currency, long startPeriod,
-			long endPeriod) {
+	public Optional<List<TradeGapPeriod>> getTradeGaps(String exchange, String currency, long startPeriod, long endPeriod) {
 		long dataStartPeriod = 0, dataEndPeriod = 0;
 
-		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{}", exchange, currency,
-				startPeriod, DateFunctions.getStringFromUnixTime(startPeriod), endPeriod,
-				DateFunctions.getStringFromUnixTime(endPeriod));
+		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{}", exchange, currency, startPeriod,
+				DateFunctions.getStringFromUnixTime(startPeriod), endPeriod, DateFunctions.getStringFromUnixTime(endPeriod));
+
+		// ensures a clean gap list
+		tradeGapList = new ArrayList<>();
 
 		// checks if there's any data
 		List<Object[]> dataValues = tradesEntityRepository.getFirstLastTrade(exchange, currency, startPeriod);
@@ -63,8 +64,7 @@ public class TradesData {
 		dataStartPeriod = ((BigInteger) dataValues.get(0)[0]).longValue();
 		dataEndPeriod = ((BigInteger) dataValues.get(0)[1]).longValue();
 
-		log.debug("dataStartPeriod: {}/{} dataEndPeriod: {}/{}", dataStartPeriod,
-				DateFunctions.getStringFromUnixTime(dataStartPeriod), dataEndPeriod,
+		log.debug("dataStartPeriod: {}/{} dataEndPeriod: {}/{}", dataStartPeriod, DateFunctions.getStringFromUnixTime(dataStartPeriod), dataEndPeriod,
 				DateFunctions.getStringFromUnixTime(dataEndPeriod));
 
 		if (dataStartPeriod == 0) {
@@ -99,13 +99,11 @@ public class TradesData {
 		return Optional.ofNullable(tradeGapList);
 	}
 
-	public List<TradesEntity> getAllTrades(String exchange, String currency, long startPeriod, long endPeriod) {
-		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{}", exchange, currency,
-				startPeriod, DateFunctions.getStringFromUnixTime(startPeriod), endPeriod,
-				DateFunctions.getStringFromUnixTime(endPeriod));
+	public List<TradesEntity> getTradesInPeriod(String exchange, String currency, long startPeriod, long endPeriod) {
+		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{}", exchange, currency, startPeriod,
+				DateFunctions.getStringFromUnixTime(startPeriod), endPeriod, DateFunctions.getStringFromUnixTime(endPeriod));
 
-		List<TradesEntity> tradesList = tradesEntityRepository.getAllTradesInPeriod(exchange, currency, startPeriod,
-				endPeriod);
+		List<TradesEntity> tradesList = tradesEntityRepository.getTradesInPeriod(exchange, currency, startPeriod, endPeriod);
 
 		log.debug("done");
 		return tradesList;

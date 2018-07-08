@@ -7,12 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import com.etricky.cryptobot.core.exchanges.common.AbstractExchange;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
-import com.etricky.cryptobot.core.exchanges.common.ExchangeGeneric;
+import com.etricky.cryptobot.core.exchanges.common.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.Commands;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
+import com.etricky.cryptobot.core.strategies.common.ExchangeStrategy;
 
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
@@ -22,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 @Scope("prototype")
-public class GdaxExchange extends ExchangeGeneric {
+public class GdaxExchange extends AbstractExchange {
 	boolean firstRun = true;
 
 	@Autowired
@@ -30,16 +32,14 @@ public class GdaxExchange extends ExchangeGeneric {
 	@Autowired
 	private GdaxLiveTrades gdaxLiveTrade;
 
-	public GdaxExchange(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles) {
-		super(exchangeThreads, commands, jsonFiles);
+	public GdaxExchange(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles, ExchangeStrategy exchangeStrategy) {
+		super(exchangeThreads, commands, jsonFiles, exchangeStrategy);
 	}
 
 	@PostConstruct
 	private void initiateAuxiliarBeans() {
-		gdaxHistoryTrades.setGdaxExchange(this);
+		gdaxHistoryTrades.setGdaxExchange(this, jsonFiles.getExchangesJson().get(ExchangeEnum.GDAX.getName()));
 		gdaxLiveTrade.setGdaxExchange(this);
-
-		exchangeStrategy.initializeStrategies(ExchangeEnum.GDAX, threadInfo.getCurrencyEnum());
 	}
 
 	private void processTrade(Trade trade) {
@@ -51,7 +51,7 @@ public class GdaxExchange extends ExchangeGeneric {
 			Thread.currentThread().setName(threadInfo.getThreadName());
 		}
 
-		gdaxLiveTrade.processLiveTrade(trade);
+		// gdaxLiveTrade.processLiveTrade(trade);
 
 		log.debug("done");
 
@@ -60,8 +60,10 @@ public class GdaxExchange extends ExchangeGeneric {
 	private void startTrade() throws ExchangeException {
 		log.debug("start");
 
+		exchangeStrategy.initializeStrategies(ExchangeEnum.GDAX, threadInfo.getCurrencyEnum());
+
 		// before getting any new trades it must fill the trade history
-		// gdaxHistoryTrades.processTradeHistory();
+		gdaxHistoryTrades.processTradeHistory();
 
 		ProductSubscription productSubscription = ProductSubscription.create().addTrades(threadInfo.getCurrencyEnum().getCurrencyPair()).build();
 
@@ -98,6 +100,10 @@ public class GdaxExchange extends ExchangeGeneric {
 
 			stopTrade();
 		} catch (ExchangeException e) {
+			log.error("Exception: {}", e);
+
+			stopTrade();
+		} catch (ExchangeExceptionRT e) {
 			log.error("Exception: {}", e);
 
 			stopTrade();

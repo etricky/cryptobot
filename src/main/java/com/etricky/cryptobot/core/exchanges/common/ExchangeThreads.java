@@ -34,7 +34,7 @@ public class ExchangeThreads {
 
 	private String threadName;
 
-	static HashMap<String, ExchangeGeneric> threadsMap = new HashMap<>();
+	static HashMap<String, AbstractExchange> threadsMap = new HashMap<>();
 
 	public int startExchangeThreads(String exchange, String currency)
 			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -51,7 +51,7 @@ public class ExchangeThreads {
 			CurrencyEnum currencyEnum = CurrencyEnum.getInstanceByShortName(currency);
 
 			// gets a new exchange bean
-			ExchangeGeneric exchangeGeneric = (ExchangeGeneric) appContext.getBean(exchangeEnum.getCrytobotBean());
+			AbstractExchange exchangeGeneric = (AbstractExchange) appContext.getBean(exchangeEnum.getCrytobotBean());
 
 			// starts the thread
 			ThreadInfo threadInfo = new ThreadInfo(exchangeEnum, currencyEnum, exchangeGeneric, threadName);

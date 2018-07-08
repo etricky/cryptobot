@@ -19,7 +19,7 @@ public class ThreadInfo {
 	@NonNull
 	private CurrencyEnum currencyEnum;
 	@NonNull
-	private ExchangeGeneric exchangeGeneric;
+	private AbstractExchange exchangeGeneric;
 	@NonNull
 	private String threadName;
 	private Thread thread;

@@ -28,7 +28,7 @@ public class CleanOldRecords {
 	public void cleanOldRecords() {
 
 		long unixTime = DateFunctions.getUnixTimeFromZDT(
-				DateFunctions.getNowZDT().minusDays(new Long(jsonFiles.getSettingsJson().getCleanOldRecords())));
+				DateFunctions.getZDTNow().minusDays(new Long(jsonFiles.getSettingsJson().getCleanOldRecords())));
 		log.debug("unixTime: {}/{}", unixTime, DateFunctions.getZDTfromUnixTime(unixTime));
 
 		int records = tradesEntityRepository.deleteOldRecords(unixTime);

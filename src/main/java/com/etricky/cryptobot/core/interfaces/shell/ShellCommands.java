@@ -59,7 +59,7 @@ public class ShellCommands implements Quit.Command {
 	public void quit() throws IOException {
 		log.debug("start");
 
-		commands.quitExchangeCurrency();
+		commands.quitApplication();
 
 		log.debug("done");
 	}

@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
+import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
 import com.etricky.cryptobot.model.TradesEntity;
 import com.etricky.cryptobot.model.ExchangePK;
 import com.etricky.cryptobot.repositories.TradesData;
@@ -28,7 +29,7 @@ public class GdaxLiveTrades {
 		this.gdaxExchange = gdaxExchange;
 	}
 
-	public void processLiveTrade(Trade trade) {
+	public void processLiveTrade(Trade trade) throws ExchangeException {
 		log.debug("start. trade: {}", trade);
 
 		long now = DateFunctions.getUnixTimeNowToEvenMinute();
@@ -39,8 +40,7 @@ public class GdaxLiveTrades {
 			mapGdaxTradeToTradeEntity(trade, now);
 			lastTradeUnixTime = now;
 		} else {
-			log.debug("last: {}/{} current: {}/{}", lastTradeUnixTime,
-					DateFunctions.getStringFromUnixTime(lastTradeUnixTime), now,
+			log.debug("last: {}/{} current: {}/{}", lastTradeUnixTime, DateFunctions.getStringFromUnixTime(lastTradeUnixTime), now,
 					DateFunctions.getStringFromUnixTime(now));
 
 			if (now - lastTradeUnixTime == 0) {
@@ -78,16 +78,12 @@ public class GdaxLiveTrades {
 		log.debug("done");
 	}
 
-	private void storeTradeData(@NonNull TradesEntity tradeEntity) {
+	private void storeTradeData(@NonNull TradesEntity tradeEntity) throws ExchangeException {
 		log.debug("start. trade: {}", tradeEntity);
 
 		tradesData.getTradesEntityRepository().save(tradeEntity);
 
-		if (!tradeEntity.isFakeTrade()) {
-			gdaxExchange.processStrategyTrade(tradeEntity);
-		} else {
-			log.debug("fake trade, not adding to timeseries");
-		}
+		gdaxExchange.processStrategyForLiveTrade(tradeEntity);
 
 		log.debug("done");
 	}
@@ -116,8 +112,8 @@ public class GdaxLiveTrades {
 	private void mapGdaxTradeToTradeEntity(Trade trade, long now) {
 		log.debug("start");
 
-		lastTradeEntity = TradesEntity.builder().openPrice(trade.getPrice()).closePrice(trade.getPrice())
-				.lowPrice(trade.getPrice()).highPrice(trade.getPrice()).timestamp(DateFunctions.getZDTfromUnixTime(now))
+		lastTradeEntity = TradesEntity.builder().openPrice(trade.getPrice()).closePrice(trade.getPrice()).lowPrice(trade.getPrice())
+				.highPrice(trade.getPrice()).timestamp(DateFunctions.getZDTfromUnixTime(now))
 				.tradeId(ExchangePK.builder().currency(gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName())
 						.exchange(gdaxExchange.getThreadInfo().getExchangeEnum().getName()).unixtime(now).build())
 				.build();

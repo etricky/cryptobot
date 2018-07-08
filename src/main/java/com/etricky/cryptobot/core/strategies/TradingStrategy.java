@@ -2,57 +2,36 @@ package com.etricky.cryptobot.core.strategies;
 
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-import org.ta4j.core.BaseTradingRecord;
+import org.ta4j.core.BaseStrategy;
+import org.ta4j.core.Rule;
+import org.ta4j.core.indicators.DoubleEMAIndicator;
+import org.ta4j.core.indicators.TripleEMAIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
+import org.ta4j.core.trading.rules.CrossedDownIndicatorRule;
+import org.ta4j.core.trading.rules.CrossedUpIndicatorRule;
 
-import com.etricky.cryptobot.core.strategies.common.ExchangeStrategy;
-import com.etricky.cryptobot.core.strategies.common.StrategyGeneric;
-import com.etricky.cryptobot.model.TradesEntity;
+import com.etricky.cryptobot.core.strategies.common.AbstractStrategy;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Component
 @Scope("prototype")
 @Slf4j
-public class TradingStrategy extends StrategyGeneric {
-
-	public TradingStrategy() {
-		log.debug("start");
-
-		tradingRecord = new BaseTradingRecord();
-
-		buildStrategy();
-
-		log.debug("done");
-	}
-
-	private void buildStrategy() {
-		log.debug("start");
-
-		ClosePriceIndicator closePrice = new ClosePriceIndicator(timeSeries);
-
-		// strategy = new BaseStrategy(entryRule, exitRule);
-
-		log.debug("done");
-	}
+public class TradingStrategy extends AbstractStrategy {
 
 	@Override
-	public int processLiveTrade(TradesEntity tradesEntity) {
-		int result = ExchangeStrategy.NO_ACTION;
+	public void createStrategy() {
 		log.debug("start");
 
-		if (timeSeries.getLastBar().inPeriod(tradesEntity.getTimestamp())) {
-			log.debug("trade in the same period");
-		}
+		ClosePriceIndicator closePrice = new ClosePriceIndicator(getTimeSeries());
+		TripleEMAIndicator tema = new TripleEMAIndicator(closePrice, 10);
+		DoubleEMAIndicator dema = new DoubleEMAIndicator(closePrice, 20);
 
-		addTradeToTimeSeries(tradesEntity);
+		Rule entryRule = new CrossedDownIndicatorRule(tema, dema);
+		Rule exitRule = new CrossedUpIndicatorRule(tema, dema);
 
-		log.debug("done. result: {}", result);
-		return result;
-	}
+		setStrategy(new BaseStrategy(entryRule, exitRule));
 
-	@Override
-	public void closeTrade() {
-		// no need to implement this method
+		log.debug("done");
 	}
 }

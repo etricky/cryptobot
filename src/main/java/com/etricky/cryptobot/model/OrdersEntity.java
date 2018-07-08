@@ -41,5 +41,5 @@ public class OrdersEntity {
 	
 	@NonNull
 	@Enumerated(EnumType.STRING)
-	private OrderType orderType;
+	private OrderEntityType orderType;
 }

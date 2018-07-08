@@ -1,7 +1,7 @@
 [
 	{
 		"name": "GDAX",
-		"historyDays": 120,
+		"historyDays": 60,
 		"currencies": [
 			{
 				"base_currency": "BTC",
@@ -22,7 +22,7 @@
 		],
 		"strategies": [
 			{
-				"bean": "TrailngStopLoss",
+				"bean": "trailingStopLossStrategy",
 				"barDurationSec": 60,
 				"timeSeriesBars": 30,
 				"lossPerc": 2.5,
@@ -30,7 +30,7 @@
 				"fee": "0.3"
 			},
 			{
-				"bean": "Trading",
+				"bean": "tradingStrategy",
 				"barDurationSec": 3600,
 				"timeSeriesBars": 30,
 				"lossPerc": null,
@@ -50,7 +50,7 @@
 		],
 		"strategies": [
 			{
-				"bean": "BitStampStopLoss",
+				"bean": "trailingStopLossStrategy",
 				"barDurationSec": 60,
 				"timeSeriesBars": 30,
 				"lossPerc": 2.5,
@@ -58,7 +58,7 @@
 				"fee": "0.3"
 			},
 			{
-				"bean": "BitStampTrading",
+				"bean": "tradingStrategy",
 				"barDurationSec": 3600,
 				"timeSeriesBars": 30,
 				"lossPerc": null,
