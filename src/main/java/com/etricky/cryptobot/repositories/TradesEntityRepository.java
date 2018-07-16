@@ -52,7 +52,7 @@ public interface TradesEntityRepository extends CrudRepository<TradesEntity, Exc
 	int deleteOldRecords(long unixTime);
 
 	/**
-	 * Returns all trades in the specified period
+	 * Returns all trades that are not fake in the specified period
 	 * 
 	 * @param exchange
 	 * @param currency
@@ -61,6 +61,17 @@ public interface TradesEntityRepository extends CrudRepository<TradesEntity, Exc
 	 * @return
 	 */
 	@Query(value = "SELECT * FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME <= ?4 AND FAKE_TRADE = FALSE", nativeQuery = true)
-	List<TradesEntity> getTradesInPeriod(String exchange, String currency, long startDataUnixTime,
-			long endDataUnixTime);
+	List<TradesEntity> getTradesInPeriodNoFake(String exchange, String currency, long startDataUnixTime, long endDataUnixTime);
+
+	/**
+	 * Returns all trades, fake or not, in the specified period
+	 * 
+	 * @param exchange
+	 * @param currency
+	 * @param startDataUnixTime
+	 * @param endDataUnixTime
+	 * @return
+	 */
+	@Query(value = "SELECT * FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME <= ?4", nativeQuery = true)
+	List<TradesEntity> getAllTradesInPeriod(String exchange, String currency, long startDataUnixTime, long endDataUnixTime);
 }

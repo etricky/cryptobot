@@ -22,13 +22,12 @@ import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeLock;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
-import com.etricky.cryptobot.model.TradesEntity;
 import com.etricky.cryptobot.model.ExchangePK;
+import com.etricky.cryptobot.model.TradesEntity;
 import com.etricky.cryptobot.repositories.TradesData;
 import com.etricky.cryptobot.repositories.TradesData.TradeGapPeriod;
 
 import lombok.Getter;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -49,22 +48,24 @@ public class GdaxHistoryTrades {
 	private Exchange gdaxXchange = null;
 	private GDAXMarketDataService mds = null;
 
+	private TradesEntity errorTrade;
+
 	public void setGdaxExchange(GdaxExchange gdaxExchange, ExchangeJson exchangeJson) {
 		this.gdaxExchange = gdaxExchange;
 		this.exchangeJson = exchangeJson;
 	}
 
 	@RequiredArgsConstructor
+	@Getter
+	@Setter
 	public static class GdaxTradePeriod {
-		@Getter
-		@Setter
-		@NonNull
-		private Long start;
+		private long start;
+		private long end;
 
-		@Getter
-		@Setter
-		@NonNull
-		private Long end;
+		public GdaxTradePeriod(long start, long end) {
+			this.start = start;
+			this.end = end;
+		}
 
 	}
 
@@ -72,6 +73,7 @@ public class GdaxHistoryTrades {
 		long endPeriod = 0, startPeriod = 0;
 		List<TradesEntity> gdaxTrades, tradesEntityList = new ArrayList<TradesEntity>(), auxTradesEntityList = new ArrayList<TradesEntity>();
 		TradesEntity lastTradeEntity = null, fakeTradeEntity;
+		long fakeTradesCounter = 0;
 
 		log.debug("start");
 
@@ -123,11 +125,11 @@ public class GdaxHistoryTrades {
 							log.debug("got {} trades from gdax", gdaxTrades.size());
 
 							if (gdaxTrades.size() == 0) {
-								log.debug("gets the previous trade from the database. {}", gdaxTradePeriod.getStart() - 60);
+								log.trace("gets the previous trade from the database. {}", gdaxTradePeriod.getStart() - 60);
 
 								auxTradesEntityList = tradesData.getTradesInPeriod(gdaxExchange.getThreadInfo().getExchangeEnum().getName(),
 										gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), gdaxTradePeriod.getStart() - 60,
-										gdaxTradePeriod.getStart() - 60);
+										gdaxTradePeriod.getStart() - 60, true);
 
 								// creates the fake trades for the gap
 								fakeTradeEntity = auxTradesEntityList.get(0).getFake();
@@ -138,6 +140,7 @@ public class GdaxHistoryTrades {
 									tradesEntityList.add(fakeTradeEntity);
 									// generates a new object to be added to tradesEntityList
 									fakeTradeEntity = fakeTradeEntity.getFake();
+									fakeTradesCounter++;
 								} while (fakeTradeEntity.getTradeId().getUnixtime() < gdaxTradePeriod.getEnd() - 60);
 
 							} else {
@@ -145,23 +148,27 @@ public class GdaxHistoryTrades {
 								Collections.reverse(gdaxTrades);
 
 								// verifies if first trade return by gdax matches the start period of the gap
-								if (gdaxTradePeriod.getStart() != gdaxTrades.get(0).getTradeId().getUnixtime()) {
-									log.debug("initial {} trades of are missing from gdax",
+								if (gdaxTradePeriod.getStart() != gdaxTrades.get(0).getTradeId().getUnixtime().longValue()) {
+									log.trace("initial {} trades of are missing from gdax",
 											(gdaxTrades.get(0).getTradeId().getUnixtime() - gdaxTradePeriod.getStart()) / 60);
 
 									auxTradesEntityList = tradesData.getTradesInPeriod(gdaxExchange.getThreadInfo().getExchangeEnum().getName(),
 											gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), gdaxTradePeriod.getStart() - 60,
-											gdaxTradePeriod.getStart() - 60);
+											gdaxTradePeriod.getStart() - 60, true);
 
 									// creates the fake trades for the gap
-									fakeTradeEntity = auxTradesEntityList.get(0).getFake();
+									if (!auxTradesEntityList.isEmpty()) {
+										fakeTradeEntity = auxTradesEntityList.get(0).getFake();
 
-									do {
-										fakeTradeEntity.addMinute();
-										log.debug("adding fake trade: {}", fakeTradeEntity);
-										tradesEntityList.add(fakeTradeEntity);
-										fakeTradeEntity = fakeTradeEntity.getFake();
-									} while (fakeTradeEntity.getTradeId().getUnixtime() <= gdaxTradePeriod.getStart());
+										do {
+											fakeTradeEntity.addMinute();
+											log.debug("adding fake trade: {}", fakeTradeEntity);
+											tradesEntityList.add(fakeTradeEntity);
+											fakeTradeEntity = fakeTradeEntity.getFake();
+											fakeTradesCounter++;
+											lastTradeEntity = fakeTradeEntity;
+										} while (fakeTradeEntity.getTradeId().getUnixtime() < gdaxTradePeriod.getStart());
+									}
 								}
 
 								for (TradesEntity gdaxTrade : gdaxTrades) {
@@ -173,7 +180,7 @@ public class GdaxHistoryTrades {
 										while (lastTradeEntity.getTradeId().getUnixtime()
 												.longValue() != gdaxTrade.getTradeId().getUnixtime().longValue() - 60) {
 
-											log.debug("missing trade. current: {} last: {} #: {}", gdaxTrade.getTradeId().getUnixtime(),
+											log.trace("missing trade. current: {} last: {} #: {}", gdaxTrade.getTradeId().getUnixtime(),
 													lastTradeEntity.getTradeId().getUnixtime(),
 													(gdaxTrade.getTradeId().getUnixtime() - lastTradeEntity.getTradeId().getUnixtime()) / 60);
 
@@ -182,17 +189,18 @@ public class GdaxHistoryTrades {
 											log.debug("adding fake trade: {}", fakeTradeEntity);
 											tradesEntityList.add(fakeTradeEntity);
 											lastTradeEntity = fakeTradeEntity;
+											fakeTradesCounter++;
 										}
 									}
 
-									log.debug("adding trade to be stored");
+									log.trace("adding trade to be stored");
 									tradesEntityList.add(gdaxTrade);
 									lastTradeEntity = gdaxTrade;
 								}
 
 								// verifies if last trade return by gdax matches the end period of the gap
-								if (gdaxTradePeriod.getEnd() - 60 > lastTradeEntity.getTradeId().getUnixtime()) {
-									log.debug("final {} trades of are missing from gdax",
+								if (gdaxTradePeriod.getEnd() - 60 != lastTradeEntity.getTradeId().getUnixtime().longValue()) {
+									log.trace("final {} trades of are missing from gdax",
 											(gdaxTradePeriod.getEnd() - 60 - lastTradeEntity.getTradeId().getUnixtime()) / 60);
 
 									fakeTradeEntity = lastTradeEntity.getFake();
@@ -202,14 +210,23 @@ public class GdaxHistoryTrades {
 										log.debug("adding fake trade: {}", fakeTradeEntity);
 										tradesEntityList.add(fakeTradeEntity);
 										fakeTradeEntity = fakeTradeEntity.getFake();
-									} while (fakeTradeEntity.getTradeId().getUnixtime() <= gdaxTradePeriod.getEnd() - 60);
+										fakeTradesCounter++;
+										lastTradeEntity = fakeTradeEntity;
+									} while (fakeTradeEntity.getTradeId().getUnixtime() < gdaxTradePeriod.getEnd() - 60);
 								}
 							}
 
-							log.debug("storing {} trades", tradesEntityList.size());
+							log.debug("storing {} trades fake: {} gdax: {}", tradesEntityList.size(), fakeTradesCounter, gdaxTrades.size());
+
+							if (tradesEntityList.size() > 300) {
+								log.error("storing over 300 trades");
+								throw new ExchangeException("GDAX trades per period surpassed");
+							}
+
 							tradesData.getTradesEntityRepository().saveAll(tradesEntityList);
 
 							tradesEntityList.clear();
+							fakeTradesCounter = 0;
 						}
 					} catch (InterruptedException | IOException e) {
 						log.error("Exception: {}", e);
@@ -229,16 +246,25 @@ public class GdaxHistoryTrades {
 			log.debug("loading timeSeries with trades");
 
 			tradesEntityList = tradesData.getTradesInPeriod(gdaxExchange.getThreadInfo().getExchangeEnum().getName(),
-					gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), startPeriod, endPeriod);
+					gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), startPeriod, endPeriod, false);
 
 			tradesEntityList.forEach(trade -> {
 				try {
 					gdaxExchange.addHistoryTradeToTimeSeries(trade);
+					errorTrade = trade;
 				} catch (ExchangeException e1) {
-					log.error("Exception: {}", e1);
-					throw new ExchangeExceptionRT(e1);
+					if (e1.getMessage().equalsIgnoreCase("Cannot add a bar with end time <= to series end time") && errorTrade.equals(trade)) {
+						log.error("Igoring invalid bar: " + trade);
+					} else {
+						log.error("Exception: {}", e1);
+						log.error("trade: {}", trade);
+						throw new ExchangeExceptionRT(e1);
+					}
 				}
 			});
+
+			tradesEntityList.clear();
+			fakeTradesCounter = 0;
 
 			log.debug("now: {} endPeriod: {}", DateFunctions.getUnixTimeNowToEvenMinute(), endPeriod);
 		} while (DateFunctions.getUnixTimeNowToEvenMinute() - endPeriod > 60);
@@ -251,8 +277,8 @@ public class GdaxHistoryTrades {
 		log.debug("start. startPeriod: {}/{} endPeriod: {}/{}", startPeriod, DateFunctions.getStringFromUnixTime(startPeriod), endPeriod,
 				DateFunctions.getStringFromUnixTime(endPeriod));
 
-		String startPeriodString = DateFunctions.getStringFromUnixTime(startPeriod);
-		String endPeriodString = DateFunctions.getStringFromUnixTime(endPeriod);
+		String startPeriodString = DateFunctions.getStringFromUnixTime(startPeriod, DateFunctions.DATE_FORMAT_EXCHANGE);
+		String endPeriodString = DateFunctions.getStringFromUnixTime(endPeriod, DateFunctions.DATE_FORMAT_EXCHANGE);
 
 		if (gdaxXchange == null) {
 			log.debug("setting up gdax exchange connection");
@@ -265,13 +291,13 @@ public class GdaxHistoryTrades {
 
 		List<TradesEntity> tradeList = Arrays.asList(candles).stream().map(c -> mapGDAXCandle(c)).collect(Collectors.toList());
 
-		log.debug("done. # of trades asked: {} returned: {}", tradeList.size(), (endPeriod - 60 - startPeriod) / 60);
+		log.debug("done. # of trades returned: {} asked: {}", tradeList.size(), (endPeriod - startPeriod) / 60);
 
 		return tradeList;
 	}
 
 	private TradesEntity mapGDAXCandle(GDAXCandle candle) {
-		log.debug("start candle: {}", candle);
+		log.trace("start candle: {}", candle);
 
 		TradesEntity tradeEntity = TradesEntity.builder().openPrice(candle.getOpen()).closePrice(candle.getClose()).lowPrice(candle.getLow())
 				.highPrice(candle.getHigh()).timestamp(DateFunctions.getZDTFromDate(candle.getTime()))
@@ -280,7 +306,7 @@ public class GdaxHistoryTrades {
 						.unixtime(DateFunctions.getUnixTimeFromdDate(candle.getTime())).build())
 				.build();
 
-		log.debug("done. tradeEntity: {}", tradeEntity);
+		log.trace("done. tradeEntity: {}", tradeEntity);
 
 		return tradeEntity;
 	}
@@ -299,14 +325,14 @@ public class GdaxHistoryTrades {
 		for (int i = 0; i < _300minuteBlocks; i++) {
 			auxEnd = auxStart + 300 * 60;
 			tradePeriods.add(new GdaxTradePeriod(auxStart, auxEnd));
-			log.debug("trade period start: {}/{} end: {}/{}", auxStart, DateFunctions.getStringFromUnixTime(auxStart), auxEnd,
+			log.trace("trade period start: {}/{} end: {}/{}", auxStart, DateFunctions.getStringFromUnixTime(auxStart), auxEnd,
 					DateFunctions.getStringFromUnixTime(auxEnd));
 			auxStart = auxEnd;
 		}
 
 		if (remainder != 0) {
 			tradePeriods.add(new GdaxTradePeriod(auxStart, auxStart + remainder));
-			log.debug("final trade period start: {}/{} end: {}/{}", auxStart, DateFunctions.getStringFromUnixTime(auxStart), auxStart + remainder,
+			log.trace("final trade period start: {}/{} end: {}/{}", auxStart, DateFunctions.getStringFromUnixTime(auxStart), auxStart + remainder,
 					DateFunctions.getStringFromUnixTime(auxStart + remainder));
 		}
 

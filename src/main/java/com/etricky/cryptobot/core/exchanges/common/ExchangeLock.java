@@ -21,7 +21,7 @@ public class ExchangeLock {
 			}
 
 			lockMap.get(exchange).lockInterruptibly();
-			log.debug("got the lock");
+			log.trace("got the lock");
 		} catch (InterruptedException e) {
 			log.debug("interrupted while getting the lock");
 
@@ -34,7 +34,7 @@ public class ExchangeLock {
 		if (lockMap.containsKey(exchange)) {
 			if (lockMap.get(exchange).isHeldByCurrentThread()) {
 				lockMap.get(exchange).unlock();
-				log.debug("released the lock");
+				log.trace("released the lock");
 			}
 		} else
 			log.debug("no lock for exchange");

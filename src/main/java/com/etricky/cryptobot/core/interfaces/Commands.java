@@ -1,15 +1,19 @@
 package com.etricky.cryptobot.core.interfaces;
 
 import java.io.IOException;
+import java.text.ParseException;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-import com.etricky.cryptobot.CryptoBotApplication;
+import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.common.ExitCode;
 import com.etricky.cryptobot.core.exchanges.common.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeEnum;
@@ -25,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class Commands {
 
 	@Autowired
-	CryptoBotApplication cryptobotApp;
+	ApplicationContext appContext;
 	@Autowired
 	ExitCode exitCode;
 	@Autowired
@@ -35,15 +39,21 @@ public class Commands {
 	@Autowired
 	JsonFiles jsonFiles;
 
-	public void startExchangeCurrency(String exchange, String currency)
+	private String auxString = null;
+
+	public void startExchangeCurrencyTrade(String exchange, String currency, int tradeType)
 			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-		log.debug("start. exchange: {} currency: {}", exchange, currency);
+		log.debug("start. exchange: {} currency: {} tradeType: {}", exchange, currency, tradeType);
 
 		if (validateExchangeCurreny(exchange, currency)) {
-			sendMessage("Starting currency for exchange: " + exchange + " currency: " + currency, true);
-			int result = exchangeThreads.startExchangeThreads(exchange, currency);
-			if (result == 1) {
-				sendMessage("Thread already exist", true);
+			sendMessage("Starting trade for exchange: " + exchange + " currency: " + currency, true);
+			if (tradeType < 0 || tradeType > 2) {
+				sendMessage("Trade type must be 0 - All, 1 - History or 2 - Live", true);
+			} else {
+				int result = exchangeThreads.startExchangeThreads(exchange, currency, tradeType);
+				if (result == ExchangeThreads.THREAD_EXISTS) {
+					sendMessage("Thread already exist", true);
+				}
 			}
 		} else
 			log.debug("not a valid command");
@@ -51,15 +61,63 @@ public class Commands {
 		log.debug("done");
 	}
 
-	public void stopExchangeCurrency(String exchange, String currency) {
+	public void backtest(String exchange, String currency, int historyDays, int choosedStrategies, String startDate, String endDate) {
+		ZonedDateTime _startDate = null, _endDate = null;
+		boolean validCommand;
+		log.debug("start. exchange: {} currency: {} historyDays: {} choosedStrategies: {} startDate: {} endDate: {}", exchange, currency, historyDays,
+				choosedStrategies, startDate, endDate);
+
+		validCommand = validateExchangeCurreny(exchange, currency);
+
+		if (validCommand && historyDays < 0) {
+			sendMessage("history days must be positive", true);
+			validCommand = false;
+		}
+
+		if (validCommand && historyDays == 0) {
+			try {
+				_startDate = DateFunctions.getZDTfromStringDate(startDate);
+			} catch (ParseException e) {
+				sendMessage("Start date must be on format yyyy-mm-dd", true);
+				validCommand = false;
+			}
+
+			try {
+				_endDate = DateFunctions.getZDTfromStringDate(endDate);
+			} catch (ParseException e) {
+				sendMessage("End date must be on format yyyy-mm-dd", true);
+				validCommand = false;
+			}
+
+			if (_startDate.isAfter(_endDate) || _startDate.isEqual(_endDate)) {
+				sendMessage("Start date must be befor end date", true);
+				validCommand = false;
+			}
+		}
+
+		if (validCommand && (choosedStrategies < 0 || choosedStrategies > 2)) {
+			sendMessage("Strategy must be 0 - All, 1 - Stop Loss or 2 - Trading", true);
+		}
+
+		if (validCommand) {
+			sendMessage("Starting backtest for exchange: " + exchange + " currency: " + currency + " historyDays: " + historyDays + " startDate: "
+					+ DateFunctions.getStringFromZDT(_startDate) + " endDate: " + DateFunctions.getStringFromZDT(_endDate), true);
+			exchangeThreads.backtest(exchange, currency, historyDays, choosedStrategies, _startDate, _endDate);
+		}
+
+		log.debug("done");
+
+	}
+
+	public void stopExchangeCurrencyTrade(String exchange, String currency) {
 
 		log.debug("start. exchange: {} currency: {}", exchange, currency);
 
-		sendMessage("Stopping currency for exchange: " + exchange + " currency: " + currency, true);
+		sendMessage("Stopping trade for exchange: " + exchange + " currency: " + currency, true);
 
 		if (validateExchangeCurreny(exchange, currency)) {
 			int result = exchangeThreads.stopThread(exchange, currency);
-			if (result == 1) {
+			if (result == ExchangeThreads.THREAD_NOT_EXISTS) {
 				sendMessage("no thread " + exchangeThreads.getThreadName(exchange, currency) + " found", true);
 			}
 		} else
@@ -68,20 +126,21 @@ public class Commands {
 		log.debug("done");
 	}
 
-	public void listExchangeCurrency() {
+	public void listExchangeCurrency(boolean toExternalApp) {
 		log.debug("start");
 
 		HashMap<String, List<String>> auxList = exchangeThreads.getRunningThreads();
 		if (auxList.isEmpty()) {
-			sendMessage("No running exchange/currencies");
+			sendMessage("No running exchange/currencies", toExternalApp);
 		} else {
-			sendMessage("Current exchange/currencies:");
+			auxString = "Current exchange/currencies:\n";
 			auxList.keySet().forEach((exch) -> {
-				sendMessage(exch);
+				auxString.concat(exch + "\n");
 				auxList.get(exch).forEach((curr) -> {
-					sendMessage(" - " + curr);
+					auxString.concat(" - " + curr + "\n");
 				});
 			});
+			sendMessage(auxString, toExternalApp);
 		}
 
 		log.debug("done");
@@ -96,7 +155,7 @@ public class Commands {
 		exchangeThreads.stopAllThreads();
 
 		exitCode.setExitCode(0);
-		cryptobotApp.terminate(exitCode);
+		terminate(exitCode);
 
 		log.debug("done");
 	}
@@ -151,14 +210,26 @@ public class Commands {
 		sendMessage(msg, false);
 	}
 
-	public void sendMessage(String msg, boolean toSlack) {
-		log.debug("start. msg: {} toSlack: {}", msg, toSlack);
+	public void sendMessage(String msg, boolean toExternalApp) {
+		log.debug("start. msg: {} toExternalApp: {}", msg, toExternalApp);
 
-		System.out.println(msg);
+		System.out.println(msg.concat("\n"));
 
-		if (toSlack)
+		if (toExternalApp)
 			slack.sendMessage(msg);
 
 		log.debug("done");
 	}
+
+	public void terminate(ExitCode exitCode) throws IOException {
+		log.debug("start. exitCode: {}", exitCode);
+
+		
+		SpringApplication.exit(appContext, exitCode);
+		slack.disconnect();
+		log.debug("Cryptobot exited");
+
+		System.exit(exitCode.getExitCode());
+	}
+
 }

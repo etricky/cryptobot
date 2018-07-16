@@ -25,7 +25,7 @@ public class TimeSeriesHelper {
 	private ZonedDateTime calculateBarEndTime(TradesEntity tradesEntity, int barDuration) throws ExchangeException {
 		ZonedDateTime returnTime = null;
 		int tradeMinute, tradeHour, endTime, barDurationAux;
-		log.debug("start. barDuration: {}", barDuration);
+		log.trace("start. barDuration: {}", barDuration);
 
 		if (barDuration <= 3600) {
 			if (3600 % barDuration != 0) {
@@ -40,7 +40,7 @@ public class TimeSeriesHelper {
 					endTime = (i + 1) * barDurationAux;
 					returnTime = tradesEntity.getTimestamp().plusMinutes(endTime - tradeMinute);
 
-					log.debug("endTime (m): {} returnTime: {}", endTime, DateFunctions.getStringFromZDT(returnTime));
+					log.trace("endTime (m): {} returnTime: {}", endTime, DateFunctions.getStringFromZDT(returnTime));
 					break;
 				}
 			}
@@ -58,7 +58,7 @@ public class TimeSeriesHelper {
 					endTime = (i + 1) * barDurationAux;
 					returnTime = tradesEntity.getTimestamp().plusHours(endTime - tradeHour).minusMinutes(tradeMinute);
 
-					log.debug("endTime (h): {} returnTime: {}", endTime, DateFunctions.getStringFromZDT(returnTime));
+					log.trace("endTime (h): {} returnTime: {}", endTime, DateFunctions.getStringFromZDT(returnTime));
 					break;
 				}
 			}
@@ -73,19 +73,19 @@ public class TimeSeriesHelper {
 			tradeHour = tradesEntity.getTimestamp().getHour();
 			returnTime = tradesEntity.getTimestamp().minusHours(tradeHour).minusMinutes(tradeMinute).plusDays(barDurationAux);
 
-			log.debug("returnTime: {}", DateFunctions.getStringFromZDT(returnTime));
+			log.trace("returnTime: {}", DateFunctions.getStringFromZDT(returnTime));
 		}
 
-		log.debug("done");
+		log.trace("done");
 		return returnTime;
 	}
 
 	public boolean addTradeToTimeSeries(TimeSeries timeSeries, TradesEntity tradesEntity, int barDuration) throws ExchangeException {
-		boolean barAdded = false;
-		log.debug("start. timeSeries: {}", timeSeries.getName());
+		boolean barAdded = false, cachedBaAddedr = false;
+		log.trace("start. timeSeries: {} tradesEntity: {} barDuration: {}", timeSeries.getName(), tradesEntity, barDuration);
 
 		if (tradesEntity.isFakeTrade()) {
-			log.debug("fake trade, not adding a bar");
+			log.trace("fake trade, not adding a bar");
 		} else {
 
 			if (barDuration > 60) {
@@ -96,25 +96,26 @@ public class TimeSeriesHelper {
 							Decimal.valueOf(tradesEntity.getOpenPrice()), Decimal.valueOf(tradesEntity.getHighPrice()),
 							Decimal.valueOf(tradesEntity.getLowPrice()), Decimal.valueOf(tradesEntity.getClosePrice()), Decimal.ONE);
 
-					log.debug("created new cached bar. endTime: {}", DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
+					log.trace("created new cached bar. endTime: {}", DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
 				}
 
 				// verifies if current trade belongs to cached bar or must create a new
 				if (tradesEntity.getTimestamp().isBefore(cachedBar.getEndTime())) {
-					log.debug("adding trade in cached bar. endTime: {}", DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
+					log.trace("adding trade in cached bar. endTime: {}", DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
 
 					cachedBar.addTrade(Decimal.ONE, Decimal.valueOf(tradesEntity.getClosePrice()));
 
 				} else {
-					log.debug("adding cached bar to timeseries {}", timeSeries.getName());
+					log.trace("adding cached bar to timeseries {}", timeSeries.getName());
 					timeSeries.addBar(cachedBar);
 					barAdded = true;
+					cachedBaAddedr = true;
 
 					cachedBar = new BaseBar(Duration.ofSeconds(barDuration), calculateBarEndTime(tradesEntity, barDuration),
 							Decimal.valueOf(tradesEntity.getOpenPrice()), Decimal.valueOf(tradesEntity.getHighPrice()),
 							Decimal.valueOf(tradesEntity.getLowPrice()), Decimal.valueOf(tradesEntity.getClosePrice()), Decimal.ONE);
 
-					log.debug("created new cached bar. endTime: {}", DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
+					log.trace("created new cached bar. endTime: {}", DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
 				}
 			} else {
 				// a trade is created every 60s so it should be added to the timeSeries
@@ -125,11 +126,11 @@ public class TimeSeriesHelper {
 				timeSeries.addBar(bar);
 				barAdded = true;
 
-				log.debug("added new bar to timeseries {} endTime: {}", timeSeries.getName(), DateFunctions.getStringFromZDT(bar.getEndTime()));
+				log.trace("added new bar to timeseries {} endTime: {}", timeSeries.getName(), DateFunctions.getStringFromZDT(bar.getEndTime()));
 			}
 		}
 
-		log.debug("done. barAdded: {}", barAdded);
+		log.trace("done. trade: {} barAdded: {} cached: {}", tradesEntity, barAdded, cachedBaAddedr);
 		return barAdded;
 	}
 }

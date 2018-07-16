@@ -37,11 +37,14 @@ public class ExchangeJson {
 	@Setter
 	public static class Strategies {
 		String bean;
-		Long barDurationSec;
-		BigDecimal lossPerc;
+		Integer barDurationSec;
+		Integer lossPerc;
 		Long timeSeriesBars;
 		BigDecimal gainPercentage;
 		BigDecimal fee;
+		BigDecimal timeFrameLong;
+		BigDecimal timeFrameShort;
+		Integer initialPeriod;
 	}
 
 	public Map<String, Strategies> getStrategiesMap() {

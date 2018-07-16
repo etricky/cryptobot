@@ -38,6 +38,9 @@ public class OrdersEntity {
 	
 	@NonNull
 	private BigDecimal amount;
+
+	@NonNull
+	private BigDecimal fee;
 	
 	@NonNull
 	@Enumerated(EnumType.STRING)

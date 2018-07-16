@@ -19,18 +19,25 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TradingStrategy extends AbstractStrategy {
 
+	public static String STRATEGY_NAME = "tradingStrategy";
+
 	@Override
 	public void createStrategy() {
+
 		log.debug("start");
 
 		ClosePriceIndicator closePrice = new ClosePriceIndicator(getTimeSeries());
-		TripleEMAIndicator tema = new TripleEMAIndicator(closePrice, 10);
-		DoubleEMAIndicator dema = new DoubleEMAIndicator(closePrice, 20);
+		TripleEMAIndicator tema = new TripleEMAIndicator(closePrice, getJsonFiles().getExchangesJson().get(getExchangeEnum().getName())
+				.getStrategiesMap().get(getBeanName()).getTimeFrameShort().intValue());
+		DoubleEMAIndicator dema = new DoubleEMAIndicator(closePrice, getJsonFiles().getExchangesJson().get(getExchangeEnum().getName())
+				.getStrategiesMap().get(getBeanName()).getTimeFrameLong().intValue());
 
-		Rule entryRule = new CrossedDownIndicatorRule(tema, dema);
-		Rule exitRule = new CrossedUpIndicatorRule(tema, dema);
-
-		setStrategy(new BaseStrategy(entryRule, exitRule));
+		// Rule entryRule = new CrossedUpIndicatorRule(dema, tema);
+		// Rule exitRule = new CrossedDownIndicatorRule(dema, tema);
+		Rule entryRule = new CrossedUpIndicatorRule(tema, dema);
+		Rule exitRule = new CrossedDownIndicatorRule(tema, dema);
+		setStrategy(new BaseStrategy(getBeanName(), entryRule, exitRule,
+				getStrategiesSettings().getInitialPeriod().intValue() / getStrategiesSettings().getBarDurationSec().intValue()));
 
 		log.debug("done");
 	}

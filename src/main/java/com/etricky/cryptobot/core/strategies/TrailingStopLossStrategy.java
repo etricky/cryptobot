@@ -1,7 +1,5 @@
 package com.etricky.cryptobot.core.strategies;
 
-import java.math.BigDecimal;
-
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.ta4j.core.BaseStrategy;
@@ -20,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TrailingStopLossStrategy extends AbstractStrategy {
 
+	public static String STRATEGY_NAME = "trailingStopLossStrategy";
+
 	@Override
 	public void createStrategy() {
 		log.debug("start");
@@ -28,14 +28,14 @@ public class TrailingStopLossStrategy extends AbstractStrategy {
 
 		// TODO feeValue must be obtained by fee*amount to be traded
 		Rule entryRule = new TraillingStopLossEntryRule(closePrice, Decimal.valueOf(getStrategiesSettings().getGainPercentage()),
-				Decimal.valueOf(getStrategiesSettings().getFee().multiply(BigDecimal.TEN)));
+				Decimal.valueOf(getStrategiesSettings().getFee()));
 
 		// TODO feeValue must be obtained by fee*amount to be traded
 		Rule exitRule = new TraillingStopLossExitRule(closePrice, Decimal.valueOf(getStrategiesSettings().getLossPerc()),
-				Decimal.valueOf(getStrategiesSettings().getGainPercentage()),
-				Decimal.valueOf(getStrategiesSettings().getFee().multiply(BigDecimal.TEN)));
+				Decimal.valueOf(getStrategiesSettings().getGainPercentage()), Decimal.valueOf(getStrategiesSettings().getFee()));
 
-		setStrategy(new BaseStrategy(entryRule, exitRule));
+		setStrategy(new BaseStrategy(getBeanName(), entryRule, exitRule,
+				getStrategiesSettings().getInitialPeriod().intValue() / getStrategiesSettings().getBarDurationSec().intValue()));
 
 		log.debug("done");
 	}

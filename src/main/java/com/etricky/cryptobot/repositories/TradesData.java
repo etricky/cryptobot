@@ -99,13 +99,18 @@ public class TradesData {
 		return Optional.ofNullable(tradeGapList);
 	}
 
-	public List<TradesEntity> getTradesInPeriod(String exchange, String currency, long startPeriod, long endPeriod) {
-		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{}", exchange, currency, startPeriod,
-				DateFunctions.getStringFromUnixTime(startPeriod), endPeriod, DateFunctions.getStringFromUnixTime(endPeriod));
+	public List<TradesEntity> getTradesInPeriod(String exchange, String currency, long startPeriod, long endPeriod, boolean includeFake) {
+		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{} includeFake: {}", exchange, currency, startPeriod,
+				DateFunctions.getStringFromUnixTime(startPeriod), endPeriod, DateFunctions.getStringFromUnixTime(endPeriod), includeFake);
+		List<TradesEntity> tradesList;
 
-		List<TradesEntity> tradesList = tradesEntityRepository.getTradesInPeriod(exchange, currency, startPeriod, endPeriod);
+		if (includeFake) {
+			tradesList = tradesEntityRepository.getAllTradesInPeriod(exchange, currency, startPeriod, endPeriod);
+		} else {
+			tradesList = tradesEntityRepository.getTradesInPeriodNoFake(exchange, currency, startPeriod, endPeriod);
+		}
 
-		log.debug("done");
+		log.debug("done. tradesList: {}", tradesList.size());
 		return tradesList;
 	}
 }

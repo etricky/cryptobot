@@ -1,7 +1,7 @@
 [
 	{
 		"name": "GDAX",
-		"historyDays": 60,
+		"historyDays": 300,
 		"currencies": [
 			{
 				"base_currency": "BTC",
@@ -24,18 +24,22 @@
 			{
 				"bean": "trailingStopLossStrategy",
 				"barDurationSec": 60,
-				"timeSeriesBars": 30,
-				"lossPerc": 2.5,
-				"gainPercentage": 3,
-				"fee": "0.3"
+				"timeSeriesBars": 604800,
+				"lossPerc": 1,
+				"gainPercentage": 2,
+				"fee": 0.3,
+				"initialPeriod": 0
 			},
 			{
 				"bean": "tradingStrategy",
 				"barDurationSec": 3600,
-				"timeSeriesBars": 30,
+				"timeSeriesBars": 1440,
 				"lossPerc": null,
-				"gainPercentage": 3,
-				"fee": "0.3"
+				"gainPercentage": null,
+				"fee": null,
+				"timeFrameShort": 10,
+				"timeFrameLong": 25,
+				"initialPeriod": 0
 			}
 		]
 	},
@@ -52,18 +56,22 @@
 			{
 				"bean": "trailingStopLossStrategy",
 				"barDurationSec": 60,
-				"timeSeriesBars": 30,
-				"lossPerc": 2.5,
-				"gainPercentage": 3,
-				"fee": "0.3"
+				"timeSeriesBars": 604800,
+				"lossPerc": 1,
+				"gainPercentage": 2,
+				"fee": 0.3,
+				"initialPeriod": 432000
 			},
 			{
 				"bean": "tradingStrategy",
 				"barDurationSec": 3600,
-				"timeSeriesBars": 30,
+				"timeSeriesBars": 1440,
 				"lossPerc": null,
-				"gainPercentage": 3,
-				"fee": "0.3"
+				"gainPercentage": null,
+				"fee": null,
+				"timeFrameShort": 10,
+				"timeFrameLong": 25,
+				"initialPeriod": 432000
 			}
 		]
 	}

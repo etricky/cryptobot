@@ -10,33 +10,41 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TraillingStopLossEntryRule extends AbstractRule {
 
-	private ClosePriceIndicator closePrice;
+	private ClosePriceIndicator closePriceIndicator;
 	private Decimal gainPercentage;
-	private Decimal feeValue;
+	private Decimal feePercentage;
 
-	public TraillingStopLossEntryRule(ClosePriceIndicator closePrice, Decimal gainPercentage, Decimal feeValue) {
-		this.closePrice = closePrice;
-		this.gainPercentage = gainPercentage;
-		this.feeValue = feeValue;
+	public TraillingStopLossEntryRule(ClosePriceIndicator closePriceIndicator, Decimal gainPercentage, Decimal feePercentage) {
+		this.closePriceIndicator = closePriceIndicator;
+		this.gainPercentage = gainPercentage.dividedBy(100);
+		this.feePercentage = feePercentage.dividedBy(100);
 	}
 
 	@Override
 	public boolean isSatisfied(int index, TradingRecord tradingRecord) {
 		boolean result = false;
-		log.debug("start. index: {}", index);
+		Decimal closePrice, feeValue, gainValue, sellPrice;
+		log.trace("start. index: {}", index);
 
 		// closePrice > sellPrice + gainPerc + fee
-		if (closePrice.getValue(index).isGreaterThan(tradingRecord.getLastOrder().getPrice()
-				.plus(gainPercentage.multipliedBy(tradingRecord.getLastOrder().getPrice())).plus(feeValue))) {
+		if (tradingRecord.getCurrentTrade().isNew() && tradingRecord.getLastExit() != null) {
+			closePrice = closePriceIndicator.getValue(index);
+			sellPrice = tradingRecord.getLastExit().getPrice();
 
-			result = true;
+			gainValue = sellPrice.multipliedBy(gainPercentage);
+			feeValue = closePrice.multipliedBy(feePercentage);
+
+			if (closePrice.isGreaterThan(sellPrice.plus(gainValue).plus(feeValue))) {
+				result = true;
+			}
+
+			log.debug("rule :: {} > {} -> {}", closePrice, sellPrice.plus(gainValue).plus(feeValue), result);
+			log.debug("\t\t cp: {} sp: {} gp: {} fee: {}", closePrice, sellPrice, gainValue, feeValue);
+		} else {
+			log.trace("no trading record");
 		}
 
-		log.trace("rule :: closePrice: {} > sellPrice {} + gainPercentage: {} + fee: {}", closePrice.getValue(index),
-				tradingRecord.getLastOrder().getPrice(),
-				gainPercentage.multipliedBy(tradingRecord.getLastOrder().getPrice()), feeValue);
-
-		log.debug("done. result: {}", result);
+		log.trace("done. result: {}", result);
 		return result;
 	}
 

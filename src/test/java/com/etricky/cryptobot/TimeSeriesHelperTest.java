@@ -2,7 +2,10 @@ package com.etricky.cryptobot;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.ParseException;
 import java.time.ZonedDateTime;
+import java.util.Date;
+import java.util.TimeZone;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.strategies.common.TimeSeriesHelper;
@@ -42,7 +45,6 @@ public class TimeSeriesHelperTest {
 		int aux;
 		TimeSeriesHelper tsh = new TimeSeriesHelper();
 		TradesEntity tradesEntity = new TradesEntity();
-		
 
 		Method method = TimeSeriesHelper.class.getDeclaredMethod("calculateBarEndTime", TradesEntity.class, Integer.TYPE);
 		method.setAccessible(true);
@@ -59,7 +61,89 @@ public class TimeSeriesHelperTest {
 		log.debug("zdt: {}", DateFunctions.getStringFromZDT(zdt));
 		tradesEntity.setTimestamp(zdt);
 
-		zdt = (ZonedDateTime) method.invoke(tsh, tradesEntity, new Integer(1 * 3600)); 
+		zdt = (ZonedDateTime) method.invoke(tsh, tradesEntity, new Integer(1 * 3600));
+
+		//////////////////////////
+		log.debug("test1 ----------");
+		zdt = DateFunctions.getZDTfromUnixTime(1509238740);
+		log.debug("zdt: {}", DateFunctions.getStringFromZDT(zdt));
+		tradesEntity.setTimestamp(zdt);
+
+		for (int i = 0; i < 3; i++) {
+			tradesEntity.setTimestamp(tradesEntity.getTimestamp().plusMinutes(1));
+			log.debug("i: {} zdt: {} zdt_s: {}", i, DateFunctions.getStringFromZDT(tradesEntity.getTimestamp()), tradesEntity.getTimestamp());
+		}
+
+		//////////////////////////
+		log.debug("test2 ----------");
+		zdt = DateFunctions.getZDTfromUnixTime(1509231600);
+		log.debug("zdt: {}", DateFunctions.getStringFromZDT(zdt));
+		tradesEntity.setTimestamp(zdt);
+
+		zdt = (ZonedDateTime) method.invoke(tsh, tradesEntity, new Integer(3600));
+
+		log.debug("zdt: {} zdt_: {}", DateFunctions.getStringFromZDT(zdt), zdt);
+
+		//////////////////////////
+		log.debug("test3 ----------");
+		zdt = DateFunctions.getZDTfromUnixTime(1509235200);
+		log.debug("zdt: {} zdt_: {}", DateFunctions.getStringFromZDT(zdt), zdt);
+
+		zdt = (ZonedDateTime) method.invoke(tsh, tradesEntity, new Integer(3600));
+		tradesEntity.setTimestamp(zdt);
+
+		log.debug("zdt: {} zdt_: {} trade: {}", DateFunctions.getStringFromZDT(zdt), zdt,
+				DateFunctions.getStringFromZDT(tradesEntity.getTimestamp()));
+
+		//////////////////////////
+		log.debug("test4 ----------");
+		zdt = DateFunctions.getZDTfromUnixTime(1509238740);
+		log.debug("zdt: {} zdt_: {}", DateFunctions.getStringFromZDT(zdt), zdt);
+
+		for (int i = 0; i < 3; i++) {
+			zdt = (ZonedDateTime) method.invoke(tsh, tradesEntity, new Integer(3600));
+			tradesEntity.setTimestamp(zdt);
+
+			log.debug("zdt: {} zdt_: {} trade: {}", DateFunctions.getStringFromZDT(zdt), zdt,
+					DateFunctions.getStringFromZDT(tradesEntity.getTimestamp()));
+		}
+
+		//////////////////////////
+		log.debug("test5 ----------");
+		try {
+			zdt = DateFunctions.getZDTfromStringDate("2017-10-29");
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		log.debug("zdt: {} zdt_: {} unix: {}", DateFunctions.getStringFromZDT(zdt), zdt, DateFunctions.getUnixTimeFromZDT(zdt));
+
+		zdt = (ZonedDateTime) method.invoke(tsh, tradesEntity, new Integer(3600));
+		tradesEntity.setTimestamp(zdt);
+
+		log.debug("zdt: {} zdt_: {} trade: {}", DateFunctions.getStringFromZDT(zdt), zdt,
+				DateFunctions.getStringFromZDT(tradesEntity.getTimestamp()));
+
+		//////////////////////////
+		log.debug("test6 ----------");
+
+		Date date = new Date(1509235200l * 1000);
+		log.debug("date: {}", date);
+		zdt = DateFunctions.getZDTFromDate(date);
+
+		log.debug("zdt: {} zdt_: {} unix: {}", DateFunctions.getStringFromZDT(zdt), zdt, DateFunctions.getUnixTimeFromZDT(zdt));
+
+		zdt = (ZonedDateTime) method.invoke(tsh, tradesEntity, new Integer(3600));
+		tradesEntity.setTimestamp(zdt);
+
+		log.debug("zdt: {} zdt_: {} trade: {}", DateFunctions.getStringFromZDT(zdt), zdt,
+				DateFunctions.getStringFromZDT(tradesEntity.getTimestamp()));
+
+		TimeZone.setDefault(TimeZone.getTimeZone("UTC")); // It will set UTC timezone
+		date = new Date(1509235200l * 1000);
+		log.debug("date: {}", date);
+		zdt = DateFunctions.getZDTFromDate(date);
+		log.debug("zdt: {} zdt_: {} unix: {}", DateFunctions.getStringFromZDT(zdt), zdt,
+				DateFunctions.getUnixTimeFromdDate(date));
 
 		log.debug("done");
 	}

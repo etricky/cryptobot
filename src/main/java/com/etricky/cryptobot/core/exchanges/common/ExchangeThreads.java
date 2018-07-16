@@ -1,5 +1,6 @@
 package com.etricky.cryptobot.core.exchanges.common;
 
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,20 +13,24 @@ import org.springframework.stereotype.Component;
 import com.etricky.cryptobot.core.common.ThreadExecutors;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
+import com.etricky.cryptobot.core.strategies.backtest.StrategyBacktest;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
 public class ExchangeThreads {
+	public final static int OK = 0;
 	public final static int EXCHANGE_INVALID = 1;
 	public final static int CURRENCY_INVALID = 2;
 	public final static int EXCHANGE_CURRENCY_PAIR_INVALID = 3;
 	public final static int NO_CONFIG_EXCHANGE = 4;
+	public final static int THREAD_EXISTS = 5;
+	public final static int THREAD_NOT_EXISTS = 6;
 
 	@Autowired
 	private ApplicationContext appContext;
-	
+
 	@Autowired
 	JsonFiles jsonFiles;
 
@@ -34,41 +39,57 @@ public class ExchangeThreads {
 
 	private String threadName;
 
-	static HashMap<String, AbstractExchange> threadsMap = new HashMap<>();
+	static HashMap<String, AbstractExchange> exchangeThreadsMap = new HashMap<>();
 
-	public int startExchangeThreads(String exchange, String currency)
+	public int startExchangeThreads(String exchange, String currency, int tradeType)
 			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-		log.debug("start. exchange: {} currency: {}", exchange, currency);
+		log.debug("start. exchange: {} currency: {} tradeType:{}", exchange, currency, tradeType);
 
-		setThreadName(exchange, currency);
+		setThreadName(exchange, currency, "T");
 
 		// validates if the thread already exists
-		if (threadsMap.containsKey(threadName)) {
+		if (exchangeThreadsMap.containsKey(threadName)) {
 			log.debug("thread alraedy exists");
-			return 1;
+			return THREAD_EXISTS;
 		} else {
 			ExchangeEnum exchangeEnum = ExchangeEnum.getInstanceByName(exchange);
 			CurrencyEnum currencyEnum = CurrencyEnum.getInstanceByShortName(currency);
 
 			// gets a new exchange bean
-			AbstractExchange exchangeGeneric = (AbstractExchange) appContext.getBean(exchangeEnum.getCrytobotBean());
+			AbstractExchange abstractExchange = (AbstractExchange) appContext.getBean(exchangeEnum.getCrytobotBean());
 
 			// starts the thread
-			ThreadInfo threadInfo = new ThreadInfo(exchangeEnum, currencyEnum, exchangeGeneric, threadName);
-			exchangeGeneric.setThreadInfo(threadInfo);
+			ThreadInfo threadInfo = new ThreadInfo(exchangeEnum, currencyEnum, abstractExchange, threadName);
+			abstractExchange.setThreadInfo(threadInfo);
+			abstractExchange.setTradeType(tradeType);
 
-			threadExecutor.executeSingle(exchangeGeneric);
+			threadExecutor.executeSingle(abstractExchange);
 
-			threadsMap.put(threadName, exchangeGeneric);
+			exchangeThreadsMap.put(threadName, abstractExchange);
 		}
+
 		log.debug("done");
-		return 0;
+		return OK;
+	}
+
+	public void backtest(String exchange, String currency, long historyDays, int choosedStrategies, ZonedDateTime startDate, ZonedDateTime endDate) {
+		log.debug("start. exchange: {} currency: {} historyDays: {}  startDate: {} endDate: {}", exchange, currency, historyDays, startDate, endDate);
+
+		setThreadName(exchange, currency, "B");
+
+		// gets a new backtest bean
+		StrategyBacktest backtesteBean = (StrategyBacktest) appContext.getBean("strategyBacktest");
+		backtesteBean.initialize(ExchangeEnum.getInstanceByName(exchange), CurrencyEnum.getInstanceByShortName(currency), historyDays,
+				choosedStrategies, startDate, endDate);
+		threadExecutor.executeSingle(backtesteBean);
+
+		log.debug("done");
 	}
 
 	public HashMap<String, List<String>> getRunningThreads() {
 		HashMap<String, List<String>> exchangeMap = new HashMap<String, List<String>>();
 
-		threadsMap.values().forEach((e) -> {
+		exchangeThreadsMap.values().forEach((e) -> {
 			String key = e.getThreadInfo().getExchangeEnum().getName();
 			if (exchangeMap.containsKey(key)) {
 				exchangeMap.get(key).add(e.getThreadInfo().getCurrencyEnum().getShortName());
@@ -82,8 +103,8 @@ public class ExchangeThreads {
 		return exchangeMap;
 	}
 
-	private String setThreadName(String exchange, String currency) {
-		threadName = "T_" + exchange + "-" + currency;
+	private String setThreadName(String exchange, String currency, String threadType) {
+		threadName = threadType + "_" + exchange + "-" + currency;
 		log.debug("thread name:{}", threadName);
 		return threadName;
 	}
@@ -91,25 +112,25 @@ public class ExchangeThreads {
 	public int stopThread(String exchange, String currency) {
 		log.debug("start. exchange: {} currency: {}", exchange, currency);
 
-		setThreadName(exchange, currency);
+		setThreadName(exchange, currency, "T");
 
-		if (threadsMap.containsKey(threadName)) {
+		if (exchangeThreadsMap.containsKey(threadName)) {
 			log.debug("found thread: {} id: {}, sending interrupt", threadName,
-					threadsMap.get(threadName).getThreadInfo().getThread().getId());
-			threadsMap.get(threadName).getThreadInfo().interrupt();
+					exchangeThreadsMap.get(threadName).getThreadInfo().getThread().getId());
+			exchangeThreadsMap.get(threadName).getThreadInfo().interrupt();
 		} else {
 			log.debug("no thread {} found", threadName);
-			return 1;
+			return THREAD_NOT_EXISTS;
 		}
 
 		log.debug("done");
-		return 0;
+		return OK;
 	}
 
 	public void stopAllThreads() {
 		log.debug("start");
 
-		threadsMap.forEach((k, t) -> {
+		exchangeThreadsMap.forEach((k, t) -> {
 
 			if (t.getThreadInfo().getThread().isAlive() && !t.getThreadInfo().getThread().isInterrupted()) {
 				log.debug("stopping thread: {}", k);
@@ -124,9 +145,9 @@ public class ExchangeThreads {
 	public void removeThread(ThreadInfo threadInfo) {
 		log.debug("start. threadInfo: {}", threadInfo);
 
-		if (threadsMap.containsKey(threadInfo.getThreadName())) {
+		if (exchangeThreadsMap.containsKey(threadInfo.getThreadName())) {
 			log.debug("thread exists and will be removed");
-			threadsMap.remove(threadInfo.getThreadName());
+			exchangeThreadsMap.remove(threadInfo.getThreadName());
 		} else
 			log.debug("thread does not exist");
 
@@ -134,12 +155,12 @@ public class ExchangeThreads {
 	}
 
 	public String getThreadName(String exchange, String currency) {
-		setThreadName(exchange, currency);
+		setThreadName(exchange, currency, "T");
 		return threadName;
 	}
 
 	public int validateExchangeCurreny(String exchange, String currency) {
-		int result = 0;
+		int result = OK;
 		log.debug("start. exchange: {} currency: {}", exchange, currency);
 
 		if (ExchangeEnum.getInstanceByName(exchange) == null) {
@@ -160,7 +181,7 @@ public class ExchangeThreads {
 			result = NO_CONFIG_EXCHANGE;
 		}
 
-		log.debug("done. result=: {}", result);
+		log.debug("done. result: {}", result);
 		return result;
 	}
 }

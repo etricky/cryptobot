@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+
+<configuration>
+	<include resource="org/springframework/boot/logging/logback/defaults.xml" />
+
+	<property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} -%5p ${PID:- } --- [%20.20t] %-60.60(%logger{39}.%M.%L) : %m%n%wEx" />
+	<property name="LOG_FILE" value="logs/cryptobot" />
+
+	<!-- APPENDERS -->
+	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<encoder>
+			<pattern>${LOG_PATTERN}</pattern>
+		</encoder>
+		<file>${LOG_FILE}.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+			<fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+			<maxFileSize>100MB</maxFileSize>
+			<maxHistory>10</maxHistory>
+		</rollingPolicy>
+	</appender>
+
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>${LOG_PATTERN}</pattern>
+		</encoder>
+	</appender>
+
+	<!-- LOGGERS -->
+	<logger name="org.springframework.web" level="INFO" additivity="false">
+		<appender-ref ref="FILE" />
+	</logger>
+
+	<logger name="com.etricky.cryptobot" level="DEBUG" additivity="false">
+		<appender-ref ref="FILE" />
+<!-- 		<appender-ref ref="CONSOLE" /> -->
+	</logger>
+	
+	<logger name="com.etricky.cryptobot.core.strategies.common.TimeSeriesHelper" level="DEBUG" additivity="false">
+		<appender-ref ref="FILE" />
+		<appender-ref ref="CONSOLE" />
+	</logger>
+
+	<root level="ERROR">
+		<appender-ref ref="FILE" />
+		<appender-ref ref="CONSOLE" />
+	</root>
+</configuration>
