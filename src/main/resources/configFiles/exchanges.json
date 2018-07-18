@@ -2,6 +2,7 @@
 	{
 		"name": "GDAX",
 		"historyDays": 300,
+		"fee": 0.3,
 		"currencies": [
 			{
 				"base_currency": "BTC",
@@ -25,9 +26,8 @@
 				"bean": "trailingStopLossStrategy",
 				"barDurationSec": 60,
 				"timeSeriesBars": 604800,
-				"lossPerc": 1,
-				"gainPercentage": 2,
-				"fee": 0.3,
+				"lossPerc": 2,
+				"gainPercentage": 4,
 				"initialPeriod": 0
 			},
 			{
@@ -36,9 +36,8 @@
 				"timeSeriesBars": 1440,
 				"lossPerc": null,
 				"gainPercentage": null,
-				"fee": null,
 				"timeFrameShort": 10,
-				"timeFrameLong": 25,
+				"timeFrameLong": 30,
 				"initialPeriod": 0
 			}
 		]
@@ -46,6 +45,7 @@
 	{
 		"name": "BITSTAMP",
 		"historyDays": 1,
+		"fee": 0.3,
 		"currencies": [
 			{
 				"base_currency": "XRP",
@@ -59,7 +59,6 @@
 				"timeSeriesBars": 604800,
 				"lossPerc": 1,
 				"gainPercentage": 2,
-				"fee": 0.3,
 				"initialPeriod": 432000
 			},
 			{
@@ -68,7 +67,6 @@
 				"timeSeriesBars": 1440,
 				"lossPerc": null,
 				"gainPercentage": null,
-				"fee": null,
 				"timeFrameShort": 10,
 				"timeFrameLong": 25,
 				"initialPeriod": 432000

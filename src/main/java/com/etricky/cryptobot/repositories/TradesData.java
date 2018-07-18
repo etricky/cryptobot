@@ -6,9 +6,12 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 import com.etricky.cryptobot.model.TradesEntity;
 
 import lombok.Builder;
@@ -25,6 +28,8 @@ public class TradesData {
 	@Autowired
 	@Getter
 	TradesEntityRepository tradesEntityRepository;
+	@Autowired
+	private JsonFiles jsonFiles;
 
 	@RequiredArgsConstructor
 	@Builder
@@ -112,5 +117,19 @@ public class TradesData {
 
 		log.debug("done. tradesList: {}", tradesList.size());
 		return tradesList;
+	}
+
+	@Scheduled(cron = "0 0 0 * * *") // every day at midnight
+	// @Scheduled(cron = "0 * * * * *") // every minute
+	@Async
+	public void cleanOldRecords() {
+
+		long unixTime = DateFunctions
+				.getUnixTimeFromZDT(DateFunctions.getZDTNow().minusDays(new Long(jsonFiles.getSettingsJson().getCleanOldRecords())));
+		log.debug("unixTime: {}/{}", unixTime, DateFunctions.getZDTfromUnixTime(unixTime));
+
+		int records = tradesEntityRepository.deleteOldRecords(unixTime);
+
+		log.debug("done. records: {}", records);
 	}
 }

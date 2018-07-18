@@ -15,6 +15,7 @@ import org.ta4j.core.Decimal;
 import org.ta4j.core.TimeSeries;
 import org.ta4j.core.TradingRecord;
 
+import com.etricky.cryptobot.core.common.NumericFunctions;
 import com.etricky.cryptobot.core.exchanges.common.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
@@ -22,7 +23,7 @@ import com.etricky.cryptobot.core.exchanges.common.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 import com.etricky.cryptobot.core.strategies.TradingStrategy;
 import com.etricky.cryptobot.core.strategies.TrailingStopLossStrategy;
-import com.etricky.cryptobot.core.strategies.backtest.BacktestInfo;
+import com.etricky.cryptobot.core.strategies.backtest.BacktestOrdersInfo;
 import com.etricky.cryptobot.core.strategies.backtest.StrategyBacktest;
 import com.etricky.cryptobot.model.ExchangePK;
 import com.etricky.cryptobot.model.OrderEntityType;
@@ -56,7 +57,8 @@ public class ExchangeStrategy {
 	private TradingRecord exchangeTradingRecord;
 	private int timeSeriesBar = 0, exchangeBarDuration = 0;
 	private TradesEntity lastTradesEntity;
-	private BigDecimal highPrice = BigDecimal.ZERO, lowPrice = BigDecimal.ZERO;
+	private BigDecimal highPrice = BigDecimal.ZERO, lowPrice = BigDecimal.ZERO, feePercentage = BigDecimal.ZERO;
+	private Decimal lastOrderBalance = Decimal.ZERO;
 
 	public void initializeStrategies(ExchangeEnum exchangeEnum, CurrencyEnum currencyEnum) {
 		log.debug("start");
@@ -64,6 +66,7 @@ public class ExchangeStrategy {
 		exchangeTradingRecord = new BaseTradingRecord();
 		strategiesMap = new HashMap<String, AbstractStrategy>();
 
+		feePercentage = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getFee().divide(BigDecimal.valueOf(100));
 		jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getStrategies().forEach((s) -> {
 			log.debug("creating bean: {} for exchange: {} currency: {}", s.getBean(), exchangeEnum.getName(), currencyEnum.getShortName());
 
@@ -115,11 +118,11 @@ public class ExchangeStrategy {
 	}
 
 	public void processStrategyForLiveTrade(TradesEntity tradesEntity, TradingRecord tradingRecord, TimeSeries timeSeries, boolean backtest,
-			int choosedStrategies, TreeMap<Long, BacktestInfo> backtestInfoMap) throws ExchangeException {
+			int choosedStrategies, TreeMap<Long, BacktestOrdersInfo> backtestInfoMap) throws ExchangeException {
 		String logAux = null, auxStrategy = null;
 		OrderEntityType orderType = null;
 		int finalResult = NO_ACTION, auxResult = NO_ACTION, lowestBar = 0;
-		Decimal amount = null;
+		Decimal amount = Decimal.ZERO, balance = Decimal.ZERO, feeValue = Decimal.ZERO;
 
 		log.trace("start. backtest: {} choosedStrategies: {}", backtest, choosedStrategies);
 
@@ -165,11 +168,16 @@ public class ExchangeStrategy {
 				// first trade of the backtest
 				if (backtest) {
 					if (tradingRecord.getLastExit() == null) {
-						amount = Decimal.valueOf(100).dividedBy(lastBar.getClosePrice());
+						balance = Decimal.valueOf(100);
 					} else {
-						amount = tradingRecord.getLastExit().getAmount().multipliedBy(tradingRecord.getLastExit().getPrice())
-								.dividedBy(tradesEntity.getClosePrice());
+						balance = tradingRecord.getLastExit().getAmount().multipliedBy(lastBar.getClosePrice());
 					}
+
+					feeValue = balance.multipliedBy(feePercentage);
+					// available balance to be used in the buy
+					balance = balance.minus(feeValue);
+					amount = balance.dividedBy(lastBar.getClosePrice());
+
 				} else {
 					// TODO amount should correspond to the amount in the exchange divided by the
 					// current price
@@ -187,6 +195,8 @@ public class ExchangeStrategy {
 
 			if (finalResult == EXIT) {
 				amount = tradingRecord.getLastEntry().getAmount();
+				feeValue = amount.multipliedBy(lastBar.getClosePrice()).multipliedBy(feePercentage);
+				balance = amount.multipliedBy(lastBar.getClosePrice()).minus(feeValue);
 
 				if (tradingRecord.exit(endIndex, lastBar.getClosePrice(), amount)) {
 					logAux = "Exit";
@@ -199,22 +209,31 @@ public class ExchangeStrategy {
 			}
 
 			if (finalResult != NO_ACTION) {
-				log.info("executed order :: strategy: {} order: {} on index: {} price: {} amount: {} balance: {}", auxStrategy, logAux, endIndex,
-						lastBar.getClosePrice(), amount, amount.multipliedBy(lastBar.getClosePrice()));
-
-				backtestInfoMap.put(Long.valueOf(endIndex),
-						new BacktestInfo(auxStrategy, tradesEntity, tradingRecord.getLastOrder(), highPrice, lowPrice));
+				log.info("executed order :: strategy: {} order: {} on index: {} price: {} amount: {} balance: {} delta: {} fee: {}", auxStrategy,
+						logAux, endIndex, lastBar.getClosePrice(), NumericFunctions.convertToBigDecimal(amount, BacktestOrdersInfo.AMOUNT_SCALE),
+						NumericFunctions.convertToBigDecimal(balance, BacktestOrdersInfo.BALANCE_SCALE),
+						NumericFunctions.convertToBigDecimal(balance.minus(lastOrderBalance), BacktestOrdersInfo.BALANCE_SCALE),
+						NumericFunctions.convertToBigDecimal(feeValue, BacktestOrdersInfo.FEE_SCALE));
 
 				if (!backtest) {
 					// TODO order should only be stored after it has been completed in the exchange
+					// TODO send slack message
 					ordersEntityRepository.save(OrdersEntity.builder()
 							.orderId(ExchangePK.builder().currency(currencyEnum.getShortName()).exchange(exchangeEnum.getName())
 									.unixtime(tradesEntity.getTradeId().getUnixtime()).build())
 							.index(BigDecimal.valueOf(endIndex)).orderType(orderType).price(BigDecimal.valueOf(lastBar.getClosePrice().doubleValue()))
 							.timestamp(tradesEntity.getTimestamp()).amount(BigDecimal.valueOf(Decimal.ONE.longValue())).build());
 				} else {
+					backtestInfoMap.put(Long.valueOf(endIndex),
+							new BacktestOrdersInfo(auxStrategy, tradesEntity, tradingRecord.getLastOrder(), highPrice, lowPrice,
+									NumericFunctions.convertToBigDecimal(lastBar.getClosePrice(), BacktestOrdersInfo.PRICE_SCALE),
+									NumericFunctions.convertToBigDecimal(feeValue, BacktestOrdersInfo.FEE_SCALE),
+									NumericFunctions.convertToBigDecimal(balance, BacktestOrdersInfo.BALANCE_SCALE),
+									NumericFunctions.convertToBigDecimal(amount, BacktestOrdersInfo.AMOUNT_SCALE)));
+					// resets the high/low price after each order
 					setHighPrice(tradesEntity.getClosePrice(), true);
 					setLowPrice(tradesEntity.getClosePrice(), true);
+					lastOrderBalance = balance;
 				}
 			}
 		} else {

@@ -14,6 +14,7 @@ import lombok.Setter;
 public class ExchangeJson {
 	String name;
 	long HistoryDays;
+	BigDecimal fee;
 	ArrayList<Currency> currencies;
 	ArrayList<Strategies> strategies;
 
@@ -41,7 +42,6 @@ public class ExchangeJson {
 		Integer lossPerc;
 		Long timeSeriesBars;
 		BigDecimal gainPercentage;
-		BigDecimal fee;
 		BigDecimal timeFrameLong;
 		BigDecimal timeFrameShort;
 		Integer initialPeriod;

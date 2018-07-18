@@ -25,10 +25,10 @@ public class TraillingStopLossExitRule extends AbstractRule {
 	@Override
 	public boolean isSatisfied(int index, TradingRecord tradingRecord) {
 		boolean result = false;
-		Decimal highPrice, buyPrice, closePrice, feeValue, gainValue, highPriceLossValue, buyPriceLossValue;
+		Decimal highPrice, buyPrice, closePrice, feeValue, gainValue, highPriceLossValue, buyPriceLossValue, rule1, rule2, rule3;
 		log.trace("start. index: {}", index);
 
-		// closePrice < highPrice - lossPerc + fee AND highPrice > buyPrice + gainPerc
+		// closePrice < highPrice - lossPerc - fee AND highPrice > buyPrice + gainPerc + fee
 		// OR closePrice < buyPrice - lossPerc
 
 		if (tradingRecord.getCurrentTrade().isClosed()) {
@@ -46,15 +46,17 @@ public class TraillingStopLossExitRule extends AbstractRule {
 				gainValue = buyPrice.multipliedBy(gainPercentage);
 				highPriceLossValue = highPrice.multipliedBy(lossPercentage);
 				buyPriceLossValue = tradingRecord.getCurrentTrade().getEntry().getPrice().multipliedBy(lossPercentage);
-				feeValue = closePrice.multipliedBy(feePercentage);
+				feeValue = closePrice.multipliedBy(tradingRecord.getLastEntry().getAmount()).multipliedBy(feePercentage);
 
-				if (closePrice.isLessThan(highPrice.minus(highPriceLossValue).plus(feeValue)) && highPrice.isGreaterThan(buyPrice.plus(gainValue))
-						|| closePrice.isLessThan(buyPrice.minus(buyPriceLossValue))) {
+				rule1 = highPrice.minus(highPriceLossValue).minus(feeValue);
+				rule2 = buyPrice.plus(gainValue).plus(feeValue);
+				rule3 = buyPrice.minus(buyPriceLossValue);
+
+				if (closePrice.isLessThan(rule1) && highPrice.isGreaterThan(rule2) || closePrice.isLessThan(rule3)) {
 					result = true;
 				}
 
-				log.debug("rule :: {} < {} AND {} > {} OR {} < {} -> {}", closePrice, highPrice.minus(highPriceLossValue).plus(feeValue), highPrice,
-						buyPrice.plus(gainValue), closePrice, buyPrice.minus(buyPriceLossValue), result);
+				log.debug("rule :: {} < {} AND {} > {} OR {} < {} -> {}", closePrice, rule1, highPrice, rule2, closePrice, rule3, result);
 				log.debug("\t\tcp: {} fee: {} bp: {} bpl: {} hp: {} hpl: {} gv: {}", closePrice, feeValue, buyPrice, buyPriceLossValue, highPrice,
 						highPriceLossValue, gainValue);
 			}

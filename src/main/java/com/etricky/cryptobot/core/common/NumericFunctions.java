@@ -7,6 +7,7 @@ import java.math.RoundingMode;
 import org.ta4j.core.Decimal;
 
 public class NumericFunctions {
+	public static final int PERCENTAGE_SCALE = 4;
 	private static final BigDecimal _100 = BigDecimal.valueOf(100);
 	private static final MathContext MC_PER = new MathContext(10, RoundingMode.HALF_UP);
 
@@ -22,9 +23,9 @@ public class NumericFunctions {
 		if (baseValue.compareTo(BigDecimal.ZERO) == 0) {
 			return BigDecimal.ZERO;
 		} else if (delta) {
-			return value.multiply(_100).divide(baseValue, MC_PER).subtract(_100);
+			return value.multiply(_100).divide(baseValue, MC_PER).subtract(_100).setScale(PERCENTAGE_SCALE, RoundingMode.HALF_UP);
 		} else {
-			return value.multiply(_100).divide(baseValue, MC_PER).setScale(2, RoundingMode.HALF_UP);
+			return value.multiply(_100).divide(baseValue, MC_PER).setScale(PERCENTAGE_SCALE, RoundingMode.HALF_UP);
 		}
 	}
 }

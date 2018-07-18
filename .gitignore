@@ -2,6 +2,7 @@
 # Maven
 ######################
 /log/
+/logs/
 /target/
 *.versionsBackup
 !.mvn/wrapper/maven-wrapper.jar
@@ -99,3 +100,4 @@ local.properties
 ######################
 *.key.json
 /.dbeaver-data-sources.xml
+*.xlsx

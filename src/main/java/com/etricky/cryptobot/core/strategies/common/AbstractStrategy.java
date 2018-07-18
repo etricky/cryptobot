@@ -1,5 +1,7 @@
 package com.etricky.cryptobot.core.strategies.common;
 
+import java.math.BigDecimal;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.ta4j.core.BaseTimeSeries;
 import org.ta4j.core.Strategy;
@@ -32,6 +34,8 @@ public abstract class AbstractStrategy {
 	@Getter
 	private ExchangeJson.Strategies strategiesSettings;
 	@Getter
+	private BigDecimal feePercentage;
+	@Getter
 	private String beanName;
 	@Getter
 	private TimeSeries timeSeries;
@@ -50,6 +54,7 @@ public abstract class AbstractStrategy {
 		this.beanName = beanName;
 		this.exchangeEnum = exchangeEnum;
 
+		feePercentage = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getFee();
 		strategiesSettings = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getStrategiesMap().get(beanName);
 		barDuration = strategiesSettings.getBarDurationSec().intValue();
 

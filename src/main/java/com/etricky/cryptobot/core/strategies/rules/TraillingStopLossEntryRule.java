@@ -23,7 +23,7 @@ public class TraillingStopLossEntryRule extends AbstractRule {
 	@Override
 	public boolean isSatisfied(int index, TradingRecord tradingRecord) {
 		boolean result = false;
-		Decimal closePrice, feeValue, gainValue, sellPrice;
+		Decimal closePrice, feeValue, gainValue, sellPrice, rule;
 		log.trace("start. index: {}", index);
 
 		// closePrice > sellPrice + gainPerc + fee
@@ -32,13 +32,13 @@ public class TraillingStopLossEntryRule extends AbstractRule {
 			sellPrice = tradingRecord.getLastExit().getPrice();
 
 			gainValue = sellPrice.multipliedBy(gainPercentage);
-			feeValue = closePrice.multipliedBy(feePercentage);
-
-			if (closePrice.isGreaterThan(sellPrice.plus(gainValue).plus(feeValue))) {
+			feeValue = closePrice.multipliedBy(tradingRecord.getLastExit().getAmount()).multipliedBy(feePercentage);
+			rule = sellPrice.plus(gainValue).plus(feeValue);
+			if (closePrice.isGreaterThan(rule)) {
 				result = true;
 			}
 
-			log.debug("rule :: {} > {} -> {}", closePrice, sellPrice.plus(gainValue).plus(feeValue), result);
+			log.debug("rule :: {} > {} -> {}", closePrice, rule, result);
 			log.debug("\t\t cp: {} sp: {} gp: {} fee: {}", closePrice, sellPrice, gainValue, feeValue);
 		} else {
 			log.trace("no trading record");
