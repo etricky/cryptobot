@@ -24,11 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class BacktestOrdersInfo {
 
-	public static final int BALANCE_SCALE = 4;
-	public static final int AMOUNT_SCALE = 8;
-	public static final int FEE_SCALE = 4;
-	public static final int PRICE_SCALE = 2;
-
 	@NonNull
 	private String strategy;
 	@NonNull
@@ -53,7 +48,8 @@ public class BacktestOrdersInfo {
 	public class BacktestData {
 
 		// order increased or decreased the balance
-		int orderResult;
+		int balanceResult;
+		int amountResult;
 		@NonNull
 		String strategyDone;
 		@NonNull
@@ -75,18 +71,21 @@ public class BacktestOrdersInfo {
 		printDeltaValues(firstOrderPrice, firstOrderAmount, firstOrderBalance, false);
 		log.info("--------------------");
 
-		return new BacktestData(amount.multiply(closePrice).compareTo(balance), strategy, order.getType());
+		return new BacktestData(balance.compareTo(previousOrderBalance), amount.compareTo(previousOrderAmount), strategy, order.getType());
 	}
 
 	private void printDeltaValues(BigDecimal deltaPrice, BigDecimal deltaAmount, BigDecimal deltaBalance, boolean deltaPercentage) {
 
-		log.info("\t\tprice: {}/{}/{} :: {}%", closePrice.subtract(deltaPrice).setScale(PRICE_SCALE, RoundingMode.HALF_UP), closePrice,
-				deltaPrice.setScale(PRICE_SCALE, RoundingMode.HALF_UP), NumericFunctions.percentage(closePrice, deltaPrice, deltaPercentage));
+		log.info("\t\tprice: {}/{}/{} :: {}%", closePrice.subtract(deltaPrice).setScale(NumericFunctions.PRICE_SCALE, RoundingMode.HALF_UP),
+				closePrice, deltaPrice.setScale(NumericFunctions.PRICE_SCALE, RoundingMode.HALF_UP),
+				NumericFunctions.percentage(closePrice, deltaPrice, deltaPercentage));
 
-		log.info("\t\tamount: {}/{}/{} :: {}%", amount.subtract(deltaAmount).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP), amount,
-				deltaAmount.setScale(AMOUNT_SCALE, RoundingMode.HALF_UP), NumericFunctions.percentage(amount, deltaAmount, deltaPercentage));
+		log.info("\t\tamount: {}/{}/{} :: {}%", amount.subtract(deltaAmount).setScale(NumericFunctions.AMOUNT_SCALE, RoundingMode.HALF_UP), amount,
+				deltaAmount.setScale(NumericFunctions.AMOUNT_SCALE, RoundingMode.HALF_UP),
+				NumericFunctions.percentage(amount, deltaAmount, deltaPercentage));
 
-		log.info("\t\tbalance: {}/{}/{} :: {}%", balance.subtract(deltaBalance).setScale(BALANCE_SCALE, RoundingMode.HALF_UP), balance,
-				deltaBalance.setScale(BALANCE_SCALE, RoundingMode.HALF_UP), NumericFunctions.percentage(balance, deltaBalance, deltaPercentage));
+		log.info("\t\tbalance: {}/{}/{} :: {}%", balance.subtract(deltaBalance).setScale(NumericFunctions.BALANCE_SCALE, RoundingMode.HALF_UP),
+				balance, deltaBalance.setScale(NumericFunctions.BALANCE_SCALE, RoundingMode.HALF_UP),
+				NumericFunctions.percentage(balance, deltaBalance, deltaPercentage));
 	}
 }

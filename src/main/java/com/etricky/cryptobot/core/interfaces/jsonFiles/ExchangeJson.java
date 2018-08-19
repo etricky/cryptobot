@@ -16,7 +16,6 @@ public class ExchangeJson {
 	long HistoryDays;
 	BigDecimal fee;
 	ArrayList<Currency> currencies;
-	ArrayList<Strategies> strategies;
 
 	@Getter
 	@Setter
@@ -34,20 +33,4 @@ public class ExchangeJson {
 		return currencies.stream().collect(Collectors.toMap(Currency::getShortName, Function.identity()));
 	}
 
-	@Getter
-	@Setter
-	public static class Strategies {
-		String bean;
-		Integer barDurationSec;
-		Integer lossPerc;
-		Long timeSeriesBars;
-		BigDecimal gainPercentage;
-		BigDecimal timeFrameLong;
-		BigDecimal timeFrameShort;
-		Integer initialPeriod;
-	}
-
-	public Map<String, Strategies> getStrategiesMap() {
-		return strategies.stream().collect(Collectors.toMap(Strategies::getBean, Function.identity()));
-	}
 }

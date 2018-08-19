@@ -27,17 +27,15 @@ public class TradingStrategy extends AbstractStrategy {
 		log.debug("start");
 
 		ClosePriceIndicator closePrice = new ClosePriceIndicator(getTimeSeries());
-		TripleEMAIndicator tema = new TripleEMAIndicator(closePrice, getJsonFiles().getExchangesJson().get(getExchangeEnum().getName())
-				.getStrategiesMap().get(getBeanName()).getTimeFrameShort().intValue());
-		DoubleEMAIndicator dema = new DoubleEMAIndicator(closePrice, getJsonFiles().getExchangesJson().get(getExchangeEnum().getName())
-				.getStrategiesMap().get(getBeanName()).getTimeFrameLong().intValue());
+		TripleEMAIndicator tema = new TripleEMAIndicator(closePrice, strategiesSettings.getTimeFrameShort().intValue());
+		DoubleEMAIndicator dema = new DoubleEMAIndicator(closePrice, strategiesSettings.getTimeFrameLong().intValue());
 
 		// Rule entryRule = new CrossedUpIndicatorRule(dema, tema);
 		// Rule exitRule = new CrossedDownIndicatorRule(dema, tema);
 		Rule entryRule = new CrossedUpIndicatorRule(tema, dema);
 		Rule exitRule = new CrossedDownIndicatorRule(tema, dema);
 		setStrategy(new BaseStrategy(getBeanName(), entryRule, exitRule,
-				getStrategiesSettings().getInitialPeriod().intValue() / getStrategiesSettings().getBarDurationSec().intValue()));
+				strategiesSettings.getInitialPeriod().intValue() / strategiesSettings.getBarDurationSec().intValue()));
 
 		log.debug("done");
 	}

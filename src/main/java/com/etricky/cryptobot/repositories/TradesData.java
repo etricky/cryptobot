@@ -123,12 +123,18 @@ public class TradesData {
 	// @Scheduled(cron = "0 * * * * *") // every minute
 	@Async
 	public void cleanOldRecords() {
+		long days = 0;
+		int records = 0;
 
-		long unixTime = DateFunctions
-				.getUnixTimeFromZDT(DateFunctions.getZDTNow().minusDays(new Long(jsonFiles.getSettingsJson().getCleanOldRecords())));
-		log.debug("unixTime: {}/{}", unixTime, DateFunctions.getZDTfromUnixTime(unixTime));
+		log.debug("start");
 
-		int records = tradesEntityRepository.deleteOldRecords(unixTime);
+		days = new Long(jsonFiles.getSettingsJson().getCleanOldRecords());
+		if (days != 0) {
+			long unixTime = DateFunctions.getUnixTimeFromZDT(DateFunctions.getZDTNow().minusDays(days));
+			log.debug("unixTime: {}/{}", unixTime, DateFunctions.getZDTfromUnixTime(unixTime));
+
+			records = tradesEntityRepository.deleteOldRecords(unixTime);
+		}
 
 		log.debug("done. records: {}", records);
 	}

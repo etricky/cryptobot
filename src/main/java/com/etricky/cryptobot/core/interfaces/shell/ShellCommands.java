@@ -16,6 +16,8 @@ import org.springframework.shell.standard.commands.Quit;
 
 import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
 import com.etricky.cryptobot.core.interfaces.Commands;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,7 +27,7 @@ public class ShellCommands implements Quit.Command {
 
 	public enum ShellCommandsEnum {
 		START("start", "s"), BACKTEST("backtest", "bt"), STOP("stop", "st"), LIST("list", "l"), QUIT("quit", "q"), HELP("help",
-				null), STACKTRACE("stacktrace", null);
+				null), STACKTRACE("stacktrace", null), RELOADFCONFIGS("reload", "rl");
 
 		public String command;
 		public String shortCommand;
@@ -101,6 +103,12 @@ public class ShellCommands implements Quit.Command {
 			log.debug("command matched: {}", ShellCommandsEnum.QUIT.command);
 			execute = true;
 
+		} else if (arguments[0].equalsIgnoreCase(ShellCommandsEnum.RELOADFCONFIGS.command)
+				|| arguments[0].equalsIgnoreCase(ShellCommandsEnum.RELOADFCONFIGS.shortCommand)) {
+
+			log.debug("command matched: {}", ShellCommandsEnum.RELOADFCONFIGS.command);
+			execute = true;
+
 		} else if (arguments[0].equalsIgnoreCase(ShellCommandsEnum.HELP.command)) {
 
 			log.debug("command matched: {}", ShellCommandsEnum.HELP.command);
@@ -114,6 +122,7 @@ public class ShellCommands implements Quit.Command {
 					command = null;
 				}
 
+				// executes shell help command of the command provided
 				cs = shellHelp.help(command);
 				txt = cs.toString();
 
@@ -165,7 +174,8 @@ public class ShellCommands implements Quit.Command {
 			@ShellOption(defaultValue = "0", help = "0 - period defined by start and end date, > 0 - period from now minus history days") int historyDays,
 			@ShellOption(defaultValue = "0", help = "0 - All, 1 - Stop loss, 2 - Trading") int choosedStrategies,
 			@ShellOption(defaultValue = "1970-01-01", help = "Start date with format yyyy-mm-dd") String startDate,
-			@ShellOption(defaultValue = "1970-01-02", help = "End date with format yyyy-mm-dd") String endDate) {
+			@ShellOption(defaultValue = "1970-01-02", help = "End date with format yyyy-mm-dd") String endDate)
+			throws JsonParseException, JsonMappingException, ExchangeException {
 
 		log.debug("start. exchange: {} currency: {} historyDays: {} choosedStrategies: {} startDate: {} endDate: {}", exchange, currency, historyDays,
 				choosedStrategies, startDate, endDate);
@@ -190,6 +200,15 @@ public class ShellCommands implements Quit.Command {
 		log.debug("start");
 
 		list(false);
+
+		log.debug("done");
+	}
+
+	@ShellMethod(value = "Reloads config files", key = { "reload", "rl" })
+	public void reload() throws JsonParseException, JsonMappingException, ExchangeException {
+		log.debug("start");
+
+		commands.reloadConfigs();
 
 		log.debug("done");
 	}

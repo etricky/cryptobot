@@ -26,16 +26,12 @@ public class TrailingStopLossStrategy extends AbstractStrategy {
 
 		ClosePriceIndicator closePrice = new ClosePriceIndicator(getTimeSeries());
 
-		// TODO feeValue must be obtained by fee*amount to be traded
-		Rule entryRule = new TraillingStopLossEntryRule(closePrice, Decimal.valueOf(getStrategiesSettings().getGainPercentage()),
-				Decimal.valueOf(getFeePercentage()));
+		Rule entryRule = new TraillingStopLossEntryRule(closePrice, Decimal.valueOf(getFeePercentage()), strategiesSettings);
 
-		// TODO feeValue must be obtained by fee*amount to be traded
-		Rule exitRule = new TraillingStopLossExitRule(closePrice, Decimal.valueOf(getStrategiesSettings().getLossPerc()),
-				Decimal.valueOf(getStrategiesSettings().getGainPercentage()), Decimal.valueOf(getFeePercentage()));
+		Rule exitRule = new TraillingStopLossExitRule(closePrice, Decimal.valueOf(getFeePercentage()), strategiesSettings);
 
 		setStrategy(new BaseStrategy(getBeanName(), entryRule, exitRule,
-				getStrategiesSettings().getInitialPeriod().intValue() / getStrategiesSettings().getBarDurationSec().intValue()));
+				strategiesSettings.getInitialPeriod().intValue() / strategiesSettings.getBarDurationSec().intValue()));
 
 		log.debug("done");
 	}

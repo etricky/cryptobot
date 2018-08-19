@@ -14,8 +14,8 @@ import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import com.etricky.cryptobot.core.common.NumericFunctions;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
-import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.StrategiesJson;
 import com.etricky.cryptobot.core.strategies.TradingStrategy;
 import com.etricky.cryptobot.model.TradesEntity;
 
@@ -25,14 +25,17 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public abstract class AbstractStrategy {
+	public final static int NO_ACTION = 0;
+	public final static int ENTER = 1;
+	public final static int EXIT = 2;
+
 	@Autowired
 	@Getter
 	private JsonFiles jsonFiles;
 	@Autowired
 	TimeSeriesHelper timeSeriesHelper;
 
-	@Getter
-	private ExchangeJson.Strategies strategiesSettings;
+	protected StrategiesJson strategiesSettings;
 	@Getter
 	private BigDecimal feePercentage;
 	@Getter
@@ -55,7 +58,7 @@ public abstract class AbstractStrategy {
 		this.exchangeEnum = exchangeEnum;
 
 		feePercentage = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getFee();
-		strategiesSettings = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getStrategiesMap().get(beanName);
+		strategiesSettings = jsonFiles.getStrategiesJson().get(beanName);
 		barDuration = strategiesSettings.getBarDurationSec().intValue();
 
 		timeSeries = new BaseTimeSeries(beanName);
@@ -75,7 +78,7 @@ public abstract class AbstractStrategy {
 	}
 
 	public int processStrategyForLiveTrade(TradesEntity tradesEntity, TradingRecord tradingRecord, long globalIndex) throws ExchangeException {
-		int result = ExchangeStrategy.NO_ACTION;
+		int result = NO_ACTION;
 
 		log.trace("start. timeSeries: {}", timeSeries.getName());
 
@@ -88,12 +91,12 @@ public abstract class AbstractStrategy {
 			if (tradingRecord.getCurrentTrade().isNew() && strategy.shouldEnter(endIndex, tradingRecord)) {
 				// strategy should enter
 				log.debug("strategy {} should ENTER on index: {}", strategy.getName(), globalIndex);
-				result = ExchangeStrategy.ENTER;
+				result = ENTER;
 
 			} else if (tradingRecord.getCurrentTrade().isOpened() && strategy.shouldExit(endIndex, tradingRecord)) {
 				// strategy should exit
 				log.debug("strategy {} should EXIT on index: {}", strategy.getName(), globalIndex);
-				result = ExchangeStrategy.EXIT;
+				result = EXIT;
 			}
 		} else {
 			log.trace("no bar added");
@@ -106,10 +109,9 @@ public abstract class AbstractStrategy {
 	public void debug(TradesEntity tradesEntity, TradingRecord tradingRecord) {
 		int endIndex = timeSeries.getEndIndex();
 		ClosePriceIndicator closePrice = new ClosePriceIndicator(getTimeSeries());
-		TripleEMAIndicator tema = new TripleEMAIndicator(closePrice, getJsonFiles().getExchangesJson().get(getExchangeEnum().getName())
-				.getStrategiesMap().get(getBeanName()).getTimeFrameLong().intValue());
-		DoubleEMAIndicator dema = new DoubleEMAIndicator(closePrice, getJsonFiles().getExchangesJson().get(getExchangeEnum().getName())
-				.getStrategiesMap().get(getBeanName()).getTimeFrameShort().intValue());
+		TripleEMAIndicator tema = new TripleEMAIndicator(closePrice, strategiesSettings.getTimeFrameLong().intValue());
+		DoubleEMAIndicator dema = new DoubleEMAIndicator(closePrice, strategiesSettings.getTimeFrameShort().intValue());
+
 		log.debug("index {} tema: {} dema: {} closePrice: {}/{}", timeSeries.getEndIndex(),
 				NumericFunctions.convertToBigDecimal(tema.getValue(endIndex), 2), NumericFunctions.convertToBigDecimal(dema.getValue(endIndex), 2),
 				tradesEntity.getClosePrice(), tradesEntity.getTimestamp());

@@ -89,23 +89,25 @@ public class GdaxHistoryTrades {
 				endPeriod = DateFunctions.getUnixTimeNowToEvenMinute();
 			}
 
-			log.debug("endPeriod: {}/{} startPeriod: {}/{}", endPeriod, DateFunctions.getStringFromUnixTime(endPeriod), startPeriod,
-					DateFunctions.getStringFromUnixTime(startPeriod));
+			log.debug("startPeriod: {}/{} endPeriod: {}/{}", startPeriod, DateFunctions.getStringFromUnixTime(startPeriod), endPeriod,
+					DateFunctions.getStringFromUnixTime(endPeriod));
 
+			// retrieves all the gaps present in the database
 			Optional<List<TradeGapPeriod>> tradeGapsOpt = tradesData.getTradeGaps(gdaxExchange.getThreadInfo().getExchangeEnum().getName(),
 					gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), startPeriod, endPeriod);
 
 			if (tradeGapsOpt.isPresent()) {
 				List<TradeGapPeriod> tradeGapsList = tradeGapsOpt.get();
 
-				log.debug("missing trades #: {}", tradeGapsList.size());
+				log.debug("gaps #: {}", tradeGapsList.size());
 
 				for (TradeGapPeriod tradeGapPeriod : tradeGapsList) {
 
 					log.debug("gap start: {}/{} end: {}/{}", tradeGapPeriod.getStart(),
 							DateFunctions.getStringFromUnixTime(tradeGapPeriod.getStart()), tradeGapPeriod.getEnd(),
 							DateFunctions.getStringFromUnixTime(tradeGapPeriod.getEnd()));
-
+					// clears the variable
+					lastTradeEntity = null;
 					List<GdaxTradePeriod> tradePeriods = getGdaxTradePeriods(tradeGapPeriod.getStart(), tradeGapPeriod.getEnd());
 
 					try {
@@ -125,8 +127,10 @@ public class GdaxHistoryTrades {
 							log.debug("got {} trades from gdax", gdaxTrades.size());
 
 							if (gdaxTrades.size() == 0) {
+								// no gaps returned by gdax for the period
 								log.trace("gets the previous trade from the database. {}", gdaxTradePeriod.getStart() - 60);
 
+								// retrieves the previous trade from the database to create the fake trade entry
 								auxTradesEntityList = tradesData.getTradesInPeriod(gdaxExchange.getThreadInfo().getExchangeEnum().getName(),
 										gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), gdaxTradePeriod.getStart() - 60,
 										gdaxTradePeriod.getStart() - 60, true);
@@ -152,6 +156,7 @@ public class GdaxHistoryTrades {
 									log.trace("initial {} trades of are missing from gdax",
 											(gdaxTrades.get(0).getTradeId().getUnixtime() - gdaxTradePeriod.getStart()) / 60);
 
+									// retrieves the previous trade from the database to create the fake trade entry
 									auxTradesEntityList = tradesData.getTradesInPeriod(gdaxExchange.getThreadInfo().getExchangeEnum().getName(),
 											gdaxExchange.getThreadInfo().getCurrencyEnum().getShortName(), gdaxTradePeriod.getStart() - 60,
 											gdaxTradePeriod.getStart() - 60, true);
@@ -172,7 +177,6 @@ public class GdaxHistoryTrades {
 								}
 
 								for (TradesEntity gdaxTrade : gdaxTrades) {
-									// must store the trades in the database
 									log.debug("gdax trade: {}", gdaxTrade);
 
 									if (lastTradeEntity != null) {

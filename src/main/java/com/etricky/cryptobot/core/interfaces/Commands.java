@@ -17,10 +17,13 @@ import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.common.ExitCode;
 import com.etricky.cryptobot.core.exchanges.common.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeEnum;
+import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 import com.etricky.cryptobot.core.interfaces.slack.Slack;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -61,7 +64,8 @@ public class Commands {
 		log.debug("done");
 	}
 
-	public void backtest(String exchange, String currency, int historyDays, int choosedStrategies, String startDate, String endDate) {
+	public void backtest(String exchange, String currency, int historyDays, int choosedStrategies, String startDate, String endDate)
+			throws JsonParseException, JsonMappingException, ExchangeException {
 		ZonedDateTime _startDate = null, _endDate = null;
 		boolean validCommand;
 		log.debug("start. exchange: {} currency: {} historyDays: {} choosedStrategies: {} startDate: {} endDate: {}", exchange, currency, historyDays,
@@ -102,6 +106,10 @@ public class Commands {
 		if (validCommand) {
 			sendMessage("Starting backtest for exchange: " + exchange + " currency: " + currency + " historyDays: " + historyDays + " startDate: "
 					+ DateFunctions.getStringFromZDT(_startDate) + " endDate: " + DateFunctions.getStringFromZDT(_endDate), true);
+
+			// ensures that the backtest has the latest configs
+			reloadConfigs();
+
 			exchangeThreads.backtest(exchange, currency, historyDays, choosedStrategies, _startDate, _endDate);
 		}
 
@@ -160,6 +168,14 @@ public class Commands {
 		log.debug("done");
 	}
 
+	public void reloadConfigs() throws JsonParseException, JsonMappingException, ExchangeException {
+		log.debug("start");
+
+		jsonFiles.loadFiles();
+
+		log.debug("done");
+	}
+
 	private boolean validateExchangeCurreny(String exchange, String currency) {
 		boolean validCommand = true;
 		log.debug("start. exchange: {} currency: {}", exchange, currency);
@@ -214,6 +230,7 @@ public class Commands {
 		log.debug("start. msg: {} toExternalApp: {}", msg, toExternalApp);
 
 		System.out.println(msg.concat("\n"));
+		log.info(msg);
 
 		if (toExternalApp)
 			slack.sendMessage(msg);
@@ -224,7 +241,6 @@ public class Commands {
 	public void terminate(ExitCode exitCode) throws IOException {
 		log.debug("start. exitCode: {}", exitCode);
 
-		
 		SpringApplication.exit(appContext, exitCode);
 		slack.disconnect();
 		log.debug("Cryptobot exited");

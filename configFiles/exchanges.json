@@ -1,0 +1,36 @@
+[
+	{
+		"name": "GDAX",
+		"historyDays": 400,
+		"fee": 0.3,
+		"currencies": [
+			{
+				"base_currency": "BTC",
+				"quote_currency": "EUR"
+			},
+			{
+				"base_currency": "BTC",
+				"quote_currency": "USD"
+			},
+			{
+				"base_currency": "ETH",
+				"quote_currency": "EUR"
+			},
+			{
+				"base_currency": "LTC",
+				"quote_currency": "EUR"
+			}
+		]
+	},
+	{
+		"name": "BITSTAMP",
+		"historyDays": 1,
+		"fee": 0.3,
+		"currencies": [
+			{
+				"base_currency": "XRP",
+				"quote_currency": "EUR"
+			}
+		]
+	}
+]

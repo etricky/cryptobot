@@ -20,6 +20,7 @@ public class JsonFiles {
 	SlackJson slackJson;
 	SettingsJson settingsJson;
 	JsonFilesReader jsonReader;
+	StrategiesJson[] strategiesJson;
 
 	public JsonFiles(JsonFilesReader jsonReader) throws JsonParseException, JsonMappingException, ExchangeException {
 		log.debug("start");
@@ -36,6 +37,12 @@ public class JsonFiles {
 		return mapExc;
 	}
 
+	public Map<String, StrategiesJson> getStrategiesJson() {
+		Map<String, StrategiesJson> mapExc = Arrays.asList(strategiesJson).stream()
+				.collect(Collectors.toMap(StrategiesJson::getBean, Function.identity()));
+		return mapExc;
+	}
+
 	public SlackJson getSlackJson() {
 		return slackJson;
 	}
@@ -48,6 +55,7 @@ public class JsonFiles {
 		log.debug("start");
 
 		exchangesJson = jsonReader.getJsonObject("exchanges.json", ExchangeJson[].class);
+		strategiesJson = jsonReader.getJsonObject("strategies.json", StrategiesJson[].class);
 		slackJson = jsonReader.getJsonObject("slack.key.json", SlackJson.class);
 		settingsJson = jsonReader.getJsonObject("settings.json", SettingsJson.class);
 

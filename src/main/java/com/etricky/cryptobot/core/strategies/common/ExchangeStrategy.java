@@ -37,9 +37,6 @@ import lombok.extern.slf4j.Slf4j;
 @Scope("prototype")
 @Slf4j
 public class ExchangeStrategy {
-	public final static int NO_ACTION = 0;
-	public final static int ENTER = 1;
-	public final static int EXIT = 2;
 
 	@Autowired
 	protected JsonFiles jsonFiles;
@@ -67,20 +64,20 @@ public class ExchangeStrategy {
 		strategiesMap = new HashMap<String, AbstractStrategy>();
 
 		feePercentage = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getFee().divide(BigDecimal.valueOf(100));
-		jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getStrategies().forEach((s) -> {
-			log.debug("creating bean: {} for exchange: {} currency: {}", s.getBean(), exchangeEnum.getName(), currencyEnum.getShortName());
+		jsonFiles.getStrategiesJson().forEach((bean, strategySettings) -> {
+			log.debug("creating bean: {} for exchange: {} currency: {}", bean, exchangeEnum.getName(), currencyEnum.getShortName());
 
 			this.exchangeEnum = exchangeEnum;
 			this.currencyEnum = currencyEnum;
 
-			AbstractStrategy strategy = (AbstractStrategy) appContext.getBean(s.getBean());
-			strategy.initializeStrategy(exchangeEnum, s.getBean());
+			AbstractStrategy abstractStrategy = (AbstractStrategy) appContext.getBean(bean);
+			abstractStrategy.initializeStrategy(exchangeEnum, bean);
 
-			strategiesMap.put(s.getBean(), strategy);
+			strategiesMap.put(bean, abstractStrategy);
 
-			if (s.getTimeSeriesBars().intValue() > timeSeriesBar) {
-				timeSeriesBar = s.getTimeSeriesBars().intValue();
-				exchangeBarDuration = s.getBarDurationSec().intValue();
+			if (strategySettings.getTimeSeriesBars().intValue() > timeSeriesBar) {
+				timeSeriesBar = strategySettings.getTimeSeriesBars().intValue();
+				exchangeBarDuration = strategySettings.getBarDurationSec().intValue();
 			}
 
 		});
@@ -121,7 +118,7 @@ public class ExchangeStrategy {
 			int choosedStrategies, TreeMap<Long, BacktestOrdersInfo> backtestInfoMap) throws ExchangeException {
 		String logAux = null, auxStrategy = null;
 		OrderEntityType orderType = null;
-		int finalResult = NO_ACTION, auxResult = NO_ACTION, lowestBar = 0;
+		int finalResult = AbstractStrategy.NO_ACTION, auxResult = AbstractStrategy.NO_ACTION, lowestBar = 0;
 		Decimal amount = Decimal.ZERO, balance = Decimal.ZERO, feeValue = Decimal.ZERO;
 
 		log.trace("start. backtest: {} choosedStrategies: {}", backtest, choosedStrategies);
@@ -140,7 +137,7 @@ public class ExchangeStrategy {
 
 				// as the strategy with highest cadence (lowest bar duration) responds quicker
 				// to changes it has a higher priority over strategies with lowest cadence
-				if (lowestBar < abstractStrategy.getBarDuration() && auxResult != NO_ACTION) {
+				if (lowestBar < abstractStrategy.getBarDuration() && auxResult != AbstractStrategy.NO_ACTION) {
 					finalResult = auxResult;
 					auxStrategy = abstractStrategy.getBeanName();
 					lowestBar = abstractStrategy.getBarDuration();
@@ -159,18 +156,18 @@ public class ExchangeStrategy {
 			setLowPrice(tradesEntity.getClosePrice(), false);
 		}
 
-		if (finalResult != NO_ACTION) {
+		if (finalResult != AbstractStrategy.NO_ACTION) {
 
 			int endIndex = timeSeries.getEndIndex();
 			Bar lastBar = timeSeries.getLastBar();
 
-			if (finalResult == ENTER) {
+			if (finalResult == AbstractStrategy.ENTER) {
 				// first trade of the backtest
 				if (backtest) {
 					if (tradingRecord.getLastExit() == null) {
 						balance = Decimal.valueOf(100);
 					} else {
-						balance = tradingRecord.getLastExit().getAmount().multipliedBy(lastBar.getClosePrice());
+						balance = Decimal.valueOf(backtestInfoMap.lastEntry().getValue().getBalance());
 					}
 
 					feeValue = balance.multipliedBy(feePercentage);
@@ -189,14 +186,20 @@ public class ExchangeStrategy {
 
 				} else {
 					log.warn("trading record not updated on ENTER");
-					finalResult = NO_ACTION;
+					finalResult = AbstractStrategy.NO_ACTION;
 				}
 			}
 
-			if (finalResult == EXIT) {
-				amount = tradingRecord.getLastEntry().getAmount();
-				feeValue = amount.multipliedBy(lastBar.getClosePrice()).multipliedBy(feePercentage);
-				balance = amount.multipliedBy(lastBar.getClosePrice()).minus(feeValue);
+			if (finalResult == AbstractStrategy.EXIT) {
+				if (backtest) {
+					amount = tradingRecord.getLastEntry().getAmount();
+					balance = amount.multipliedBy(lastBar.getClosePrice());
+					feeValue = balance.multipliedBy(feePercentage);
+					balance = balance.minus(feeValue);
+				} else {
+					// TODO amount should correspond to the amount in the exchange divided by the
+					// current price
+				}
 
 				if (tradingRecord.exit(endIndex, lastBar.getClosePrice(), amount)) {
 					logAux = "Exit";
@@ -204,16 +207,16 @@ public class ExchangeStrategy {
 
 				} else {
 					log.warn("trading record not updated on EXIT");
-					finalResult = NO_ACTION;
+					finalResult = AbstractStrategy.NO_ACTION;
 				}
 			}
 
-			if (finalResult != NO_ACTION) {
+			if (finalResult != AbstractStrategy.NO_ACTION) {
 				log.info("executed order :: strategy: {} order: {} on index: {} price: {} amount: {} balance: {} delta: {} fee: {}", auxStrategy,
-						logAux, endIndex, lastBar.getClosePrice(), NumericFunctions.convertToBigDecimal(amount, BacktestOrdersInfo.AMOUNT_SCALE),
-						NumericFunctions.convertToBigDecimal(balance, BacktestOrdersInfo.BALANCE_SCALE),
-						NumericFunctions.convertToBigDecimal(balance.minus(lastOrderBalance), BacktestOrdersInfo.BALANCE_SCALE),
-						NumericFunctions.convertToBigDecimal(feeValue, BacktestOrdersInfo.FEE_SCALE));
+						logAux, endIndex, lastBar.getClosePrice(), NumericFunctions.convertToBigDecimal(amount, NumericFunctions.AMOUNT_SCALE),
+						NumericFunctions.convertToBigDecimal(balance, NumericFunctions.BALANCE_SCALE),
+						NumericFunctions.convertToBigDecimal(balance.minus(lastOrderBalance), NumericFunctions.BALANCE_SCALE),
+						NumericFunctions.convertToBigDecimal(feeValue, NumericFunctions.FEE_SCALE));
 
 				if (!backtest) {
 					// TODO order should only be stored after it has been completed in the exchange
@@ -226,10 +229,10 @@ public class ExchangeStrategy {
 				} else {
 					backtestInfoMap.put(Long.valueOf(endIndex),
 							new BacktestOrdersInfo(auxStrategy, tradesEntity, tradingRecord.getLastOrder(), highPrice, lowPrice,
-									NumericFunctions.convertToBigDecimal(lastBar.getClosePrice(), BacktestOrdersInfo.PRICE_SCALE),
-									NumericFunctions.convertToBigDecimal(feeValue, BacktestOrdersInfo.FEE_SCALE),
-									NumericFunctions.convertToBigDecimal(balance, BacktestOrdersInfo.BALANCE_SCALE),
-									NumericFunctions.convertToBigDecimal(amount, BacktestOrdersInfo.AMOUNT_SCALE)));
+									NumericFunctions.convertToBigDecimal(lastBar.getClosePrice(), NumericFunctions.PRICE_SCALE),
+									NumericFunctions.convertToBigDecimal(feeValue, NumericFunctions.FEE_SCALE),
+									NumericFunctions.convertToBigDecimal(balance, NumericFunctions.BALANCE_SCALE),
+									NumericFunctions.convertToBigDecimal(amount, NumericFunctions.AMOUNT_SCALE)));
 					// resets the high/low price after each order
 					setHighPrice(tradesEntity.getClosePrice(), true);
 					setLowPrice(tradesEntity.getClosePrice(), true);

@@ -5,63 +5,89 @@ import org.ta4j.core.TradingRecord;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import org.ta4j.core.trading.rules.AbstractRule;
 
+import com.etricky.cryptobot.core.common.NumericFunctions;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.StrategiesJson;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class TraillingStopLossExitRule extends AbstractRule {
 
 	private ClosePriceIndicator closePriceIndicator;
-	private Decimal lossPercentage;
-	private Decimal gainPercentage;
+
+	private Decimal lossPercentage1;
+	// private Decimal lossPercentage2;
+	// private Decimal lossPercentage3;
+
+	private Decimal gainPercentage1;
+	// private Decimal gainPercentage2;
+	// private Decimal gainPercentage3;
+
 	private Decimal feePercentage;
 
-	public TraillingStopLossExitRule(ClosePriceIndicator closePrice, Decimal lossPercentage, Decimal gainPercentage, Decimal feePercentage) {
+	private StrategiesJson strategiesSettings;
+
+	public TraillingStopLossExitRule(ClosePriceIndicator closePrice, Decimal feePercentage, StrategiesJson strategiesSettings) {
 		this.closePriceIndicator = closePrice;
-		this.lossPercentage = lossPercentage.dividedBy(100);
-		this.gainPercentage = gainPercentage.dividedBy(100);
+
+		this.gainPercentage1 = Decimal.valueOf(strategiesSettings.getExitGainPercentage1()).dividedBy(100);
+		// this.gainPercentage2 = Decimal.valueOf(strategiesSettings.getExitGainPercentage2()).dividedBy(100);
+		// this.gainPercentage3 = Decimal.valueOf(strategiesSettings.getExitGainPercentage3()).dividedBy(100);
+
+		this.lossPercentage1 = Decimal.valueOf(strategiesSettings.getExitLossPercentage1()).dividedBy(100);
+		// this.lossPercentage2 = Decimal.valueOf(strategiesSettings.getExitLossPercentage2()).dividedBy(100);
+		// this.lossPercentage3 = Decimal.valueOf(strategiesSettings.getExitLossPercentage3()).dividedBy(100);
+
 		this.feePercentage = feePercentage.dividedBy(100);
+
+		this.strategiesSettings = strategiesSettings;
+
+		log.debug("feePercentage: {} gainPercentage1: {} lossPercentage1: {}", this.feePercentage, gainPercentage1, lossPercentage1);
 	}
 
 	@Override
 	public boolean isSatisfied(int index, TradingRecord tradingRecord) {
 		boolean result = false;
-		Decimal highPrice, buyPrice, closePrice, feeValue, gainValue, highPriceLossValue, buyPriceLossValue, rule1, rule2, rule3;
-		log.trace("start. index: {}", index);
+		Decimal highPrice, buyPrice, closePrice, highPriceLossValue, rule10;
 
-		// closePrice < highPrice - lossPerc - fee AND highPrice > buyPrice + gainPerc + fee
-		// OR closePrice < buyPrice - lossPerc
+		if (strategiesSettings.getExitEnabled()) {
+			log.trace("start. index: {}", index);
 
-		if (tradingRecord.getCurrentTrade().isClosed()) {
-			log.trace("trade is closed");
-		} else {
-			if (tradingRecord.getCurrentTrade().getEntry() != null && tradingRecord.getCurrentTrade().getEntry().getAmount() != null) {
+			if (tradingRecord.getCurrentTrade().isClosed()) {
+				log.trace("trade is closed");
+			} else {
+				if (tradingRecord.getCurrentTrade().getEntry() != null && tradingRecord.getCurrentTrade().getEntry().getAmount() != null) {
 
-				highPrice = getHighPrice(index, tradingRecord, closePriceIndicator);
-				log.trace("barCount: {} max: {}", closePriceIndicator.getTimeSeries().getBarCount(),
-						closePriceIndicator.getTimeSeries().getMaximumBarCount());
-				log.trace("highPrice :: entry index: {}", tradingRecord.getLastEntry().getIndex());
-				buyPrice = tradingRecord.getCurrentTrade().getEntry().getPrice();
-				closePrice = closePriceIndicator.getValue(index);
+					log.trace("index: {}", tradingRecord.getLastEntry().getIndex());
+					highPrice = getHighPrice(index, tradingRecord, closePriceIndicator);
+					buyPrice = tradingRecord.getCurrentTrade().getEntry().getPrice();
+					closePrice = closePriceIndicator.getValue(index);
 
-				gainValue = buyPrice.multipliedBy(gainPercentage);
-				highPriceLossValue = highPrice.multipliedBy(lossPercentage);
-				buyPriceLossValue = tradingRecord.getCurrentTrade().getEntry().getPrice().multipliedBy(lossPercentage);
-				feeValue = closePrice.multipliedBy(tradingRecord.getLastEntry().getAmount()).multipliedBy(feePercentage);
+					Decimal hb = highPrice.minus(buyPrice).dividedBy(buyPrice);
+					highPriceLossValue = highPrice.multipliedBy(lossPercentage1);
+					rule10 = highPrice.minus(highPriceLossValue);
 
-				rule1 = highPrice.minus(highPriceLossValue).minus(feeValue);
-				rule2 = buyPrice.plus(gainValue).plus(feeValue);
-				rule3 = buyPrice.minus(buyPriceLossValue);
+					if (hb.isLessThanOrEqual(gainPercentage1) && closePrice.isLessThanOrEqual(rule10)) {
+						result = true;
+					}
 
-				if (closePrice.isLessThan(rule1) && highPrice.isGreaterThan(rule2) || closePrice.isLessThan(rule3)) {
-					result = true;
+					log.debug("rulex0 :: {} <= {} AND {} <= {} -> {}", NumericFunctions.convertToBigDecimal(hb, NumericFunctions.PERCENTAGE_SCALE),
+							gainPercentage1, NumericFunctions.convertToBigDecimal(gainPercentage1, NumericFunctions.PERCENTAGE_SCALE),
+							NumericFunctions.convertToBigDecimal(closePrice, NumericFunctions.PRICE_SCALE),
+							NumericFunctions.convertToBigDecimal(rule10, NumericFunctions.PRICE_SCALE), result);
+					log.debug("\t\tcp: {} bp: {} hp: {} hb: {} hpl: {}",
+							NumericFunctions.convertToBigDecimal(closePrice, NumericFunctions.PRICE_SCALE),
+							NumericFunctions.convertToBigDecimal(buyPrice, NumericFunctions.PRICE_SCALE),
+							NumericFunctions.convertToBigDecimal(highPrice, NumericFunctions.PRICE_SCALE),
+							NumericFunctions.convertToBigDecimal(hb, NumericFunctions.PERCENTAGE_SCALE),
+							NumericFunctions.convertToBigDecimal(highPriceLossValue, NumericFunctions.PRICE_SCALE));
+
 				}
-
-				log.debug("rule :: {} < {} AND {} > {} OR {} < {} -> {}", closePrice, rule1, highPrice, rule2, closePrice, rule3, result);
-				log.debug("\t\tcp: {} fee: {} bp: {} bpl: {} hp: {} hpl: {} gv: {}", closePrice, feeValue, buyPrice, buyPriceLossValue, highPrice,
-						highPriceLossValue, gainValue);
 			}
 		}
+
 		log.trace("done. result: {}", result);
+		// result = false;
 		return result;
 	}
 

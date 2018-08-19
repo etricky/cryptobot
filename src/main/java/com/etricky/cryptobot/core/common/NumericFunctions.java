@@ -8,6 +8,10 @@ import org.ta4j.core.Decimal;
 
 public class NumericFunctions {
 	public static final int PERCENTAGE_SCALE = 4;
+	public static final int BALANCE_SCALE = 4;
+	public static final int AMOUNT_SCALE = 8;
+	public static final int FEE_SCALE = 4;
+	public static final int PRICE_SCALE = 2;
 	private static final BigDecimal _100 = BigDecimal.valueOf(100);
 	private static final MathContext MC_PER = new MathContext(10, RoundingMode.HALF_UP);
 

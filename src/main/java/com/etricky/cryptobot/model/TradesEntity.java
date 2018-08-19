@@ -3,11 +3,13 @@ package com.etricky.cryptobot.model;
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 
+import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.Table;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
+import com.etricky.cryptobot.core.common.NumericFunctions;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,12 +31,16 @@ public class TradesEntity {
 	@NonNull
 	private ExchangePK tradeId;
 	@NonNull
+	@Column(precision = 12, scale = NumericFunctions.BALANCE_SCALE)
 	private BigDecimal openPrice;
 	@NonNull
+	@Column(precision = 12, scale = NumericFunctions.BALANCE_SCALE)
 	private BigDecimal closePrice;
 	@NonNull
+	@Column(precision = 12, scale = NumericFunctions.BALANCE_SCALE)
 	private BigDecimal highPrice;
 	@NonNull
+	@Column(precision = 12, scale = NumericFunctions.BALANCE_SCALE)
 	private BigDecimal lowPrice;
 	@NonNull
 	private ZonedDateTime timestamp;

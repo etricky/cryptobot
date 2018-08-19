@@ -21,6 +21,7 @@ import org.ta4j.core.analysis.criteria.TotalProfitCriterion;
 import org.ta4j.core.analysis.criteria.VersusBuyAndHoldCriterion;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
+import com.etricky.cryptobot.core.common.NumericFunctions;
 import com.etricky.cryptobot.core.exchanges.common.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeEnum;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
@@ -31,7 +32,10 @@ import com.etricky.cryptobot.core.strategies.TradingStrategy;
 import com.etricky.cryptobot.core.strategies.TrailingStopLossStrategy;
 import com.etricky.cryptobot.core.strategies.backtest.BacktestOrdersInfo.BacktestData;
 import com.etricky.cryptobot.core.strategies.common.ExchangeStrategy;
+import com.etricky.cryptobot.model.BacktestEntity;
+import com.etricky.cryptobot.model.BacktestPK;
 import com.etricky.cryptobot.model.TradesEntity;
+import com.etricky.cryptobot.repositories.BacktestDataRepository;
 import com.etricky.cryptobot.repositories.TradesData;
 
 import lombok.extern.slf4j.Slf4j;
@@ -52,16 +56,19 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 	private ExchangeStrategy exchangeStrategy;
 	@Autowired
 	private Commands commands;
+	@Autowired
+	BacktestDataRepository backtestDataRepository;
 
 	private ExchangeEnum exchangeEnum;
 	private CurrencyEnum currencyEnum;
 	private long historyDays;
-	private int choosedStrategies, posOrders = 0, negOrders = 0, totalOrders = 0, tradingBuys = 0, tradingSells = 0, stopLossBuys = 0,
-			stopLossSells = 0;
+	private int choosedStrategies, posBalanceOrders = 0, negBalanceOrders = 0, posAmountOrders = 0, negAmountOrders = 0, totalOrders = 0,
+			tradingBuys = 0, tradingSells = 0, stopLossBuys = 0, stopLossSells = 0;
 	private ZonedDateTime startDate, endDate;
 	private BigDecimal firstOrderPrice = BigDecimal.ZERO, firstOrderAmount = BigDecimal.ZERO, firstOrderBalance = BigDecimal.ZERO,
 			previousOrderPrice = BigDecimal.ZERO, previousOrderAmount = BigDecimal.ZERO, previousOrderBalance = BigDecimal.ZERO,
 			totalFees = BigDecimal.ZERO;
+	private ArrayList<BacktestEntity> backtestEntityList = new ArrayList<>();
 
 	public void initialize(ExchangeEnum exchangeEnum, CurrencyEnum currencyEnum, long historyDays, int choosedStrategies, ZonedDateTime startDate,
 			ZonedDateTime endDate) {
@@ -82,7 +89,7 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 		List<TradesEntity> tradesEntityList = new ArrayList<TradesEntity>();
 		TradingRecord tradingRecord = new BaseTradingRecord();
 		TimeSeries timeSeries = new BaseTimeSeries("backtest");
-		long startDateUnixTime, endDateUnixTime;
+		long startDateUnixTime, endDateUnixTime, backtestStart = DateFunctions.getUnixTimeNow();
 		Double value;
 		TreeMap<Long, BacktestOrdersInfo> backtestOrderInfoMap = new TreeMap<>();
 
@@ -120,23 +127,29 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 				}
 			});
 
-			backtestOrderInfoMap.forEach((index, info) -> {
+			backtestOrderInfoMap.forEach((index, orderInfo) -> {
 
 				if (firstOrderAmount == BigDecimal.ZERO) {
-					firstOrderAmount = info.getAmount();
-					firstOrderPrice = info.getClosePrice();
-					firstOrderBalance = info.getBalance();
+					firstOrderAmount = orderInfo.getAmount();
+					firstOrderPrice = orderInfo.getClosePrice();
+					firstOrderBalance = orderInfo.getBalance();
 				}
 
-				BacktestData backtestData = info.calculateAndprintOrder(index, firstOrderPrice, firstOrderAmount, firstOrderBalance,
+				BacktestData backtestData = orderInfo.calculateAndprintOrder(index, firstOrderPrice, firstOrderAmount, firstOrderBalance,
 						previousOrderPrice, previousOrderAmount, previousOrderBalance);
 
-				totalFees = totalFees.add(info.getFeeValue());
+				totalFees = totalFees.add(orderInfo.getFeeValue());
 
-				if (backtestData.getOrderResult() < 0) {
-					negOrders++;
+				if (backtestData.getBalanceResult() < 0) {
+					negBalanceOrders++;
 				} else {
-					posOrders++;
+					posBalanceOrders++;
+				}
+
+				if (backtestData.getAmountResult() < 0) {
+					negAmountOrders++;
+				} else {
+					posAmountOrders++;
 				}
 
 				if (backtestData.getStrategyDone().equals(TradingStrategy.STRATEGY_NAME)) {
@@ -152,14 +165,30 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 						stopLossSells++;
 					}
 				}
-				previousOrderPrice = info.getClosePrice();
-				previousOrderAmount = info.getAmount();
-				previousOrderBalance = info.getBalance();
+
+				// stores the backtest data in the database
+				// the unixtime is the time the backtest ran so it can store multiple runs
+				backtestEntityList.add(BacktestEntity.builder()
+						.orderId(BacktestPK.builder().currency(currencyEnum.getShortName()).exchange(exchangeEnum.getName()).unixtime(backtestStart)
+								.index(BigDecimal.valueOf(index)).build())
+						.orderType(orderInfo.getOrder().getType()).timestamp(orderInfo.getTradesEntity().getTimestamp())
+						.orderUnixTime(BigDecimal.valueOf(orderInfo.getTradesEntity().getTradeId().getUnixtime())).feeValue(orderInfo.getFeeValue())
+						.deltaAmount(orderInfo.getAmount().subtract(previousOrderAmount)).amount(orderInfo.getAmount())
+						.deltaBalance(orderInfo.getBalance().subtract(previousOrderBalance)).balance(orderInfo.getBalance())
+						.closePrice(orderInfo.getClosePrice()).highPrice(orderInfo.getHighPriceSinceLastOrder())
+						.lowPrice(orderInfo.getLowPriceSinceLastOrder()).strategy(backtestData.strategyDone).build());
+
+				previousOrderPrice = orderInfo.getClosePrice();
+				previousOrderAmount = orderInfo.getAmount();
+				previousOrderBalance = orderInfo.getBalance();
 				totalOrders++;
+
 			});
 
-			log.info("totalOrders: {}, positive: {}, negative: {} fees: {}", totalOrders, posOrders, negOrders,
-					totalFees.setScale(BacktestOrdersInfo.FEE_SCALE));
+			backtestDataRepository.saveAll(backtestEntityList);
+
+			log.info("totalOrders: {}, posBalance: {}, negBalance: {}, posAmount: {}, negAmount: {} fees: {}", totalOrders, posBalanceOrders,
+					negBalanceOrders, posAmountOrders, negAmountOrders, totalFees.setScale(NumericFunctions.FEE_SCALE));
 			log.info("strategy: {}, buys: {} sells: {}", TradingStrategy.STRATEGY_NAME, tradingBuys, tradingSells);
 			log.info("strategy: {}, buys: {} sells: {}", TrailingStopLossStrategy.STRATEGY_NAME, stopLossBuys, stopLossSells);
 			// set and run analysis criteria
