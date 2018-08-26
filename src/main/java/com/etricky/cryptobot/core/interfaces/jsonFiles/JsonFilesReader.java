@@ -9,9 +9,7 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ResourceUtils;
 
-import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
+import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
@@ -27,14 +25,14 @@ public class JsonFilesReader {
 		mapper = new ObjectMapper();
 	}
 
-	public <T> T getJsonObject(String path, String jsonFile, Class<T> classObject)
-			throws JsonParseException, JsonMappingException, ExchangeException {
+	public <T> T getJsonObject(String path, String jsonFile, Class<T> classObject) throws ExchangeException {
 
 		try {
 			// return mapper.readValue(new ClassPathResource(path + jsonFile).getFile(),
 			// classObject);
 
-			// Resource[] resource = appContext.getResources("classpath*:" + path + jsonFile);
+			// Resource[] resource = appContext.getResources("classpath*:" + path +
+			// jsonFile);
 			// log.debug("resource: {}",resource[0].getURL());
 			// return mapper.readValue(resource[0].getInputStream(), classObject);
 
@@ -55,7 +53,7 @@ public class JsonFilesReader {
 		}
 	}
 
-	public <T> T getJsonObject(String jsonFile, Class<T> classObject) throws JsonParseException, JsonMappingException, ExchangeException {
+	public <T> T getJsonObject(String jsonFile, Class<T> classObject) throws ExchangeException {
 		return getJsonObject("configFiles/", jsonFile, classObject);
 	}
 }

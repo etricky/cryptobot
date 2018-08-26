@@ -27,22 +27,28 @@ public class TraillingStopLossExitRule extends AbstractRule {
 
 	private StrategiesJson strategiesSettings;
 
-	public TraillingStopLossExitRule(ClosePriceIndicator closePrice, Decimal feePercentage, StrategiesJson strategiesSettings) {
+	public TraillingStopLossExitRule(ClosePriceIndicator closePrice, Decimal feePercentage,
+			StrategiesJson strategiesSettings) {
 		this.closePriceIndicator = closePrice;
 
 		this.gainPercentage1 = Decimal.valueOf(strategiesSettings.getExitGainPercentage1()).dividedBy(100);
-		// this.gainPercentage2 = Decimal.valueOf(strategiesSettings.getExitGainPercentage2()).dividedBy(100);
-		// this.gainPercentage3 = Decimal.valueOf(strategiesSettings.getExitGainPercentage3()).dividedBy(100);
+		// this.gainPercentage2 =
+		// Decimal.valueOf(strategiesSettings.getExitGainPercentage2()).dividedBy(100);
+		// this.gainPercentage3 =
+		// Decimal.valueOf(strategiesSettings.getExitGainPercentage3()).dividedBy(100);
 
 		this.lossPercentage1 = Decimal.valueOf(strategiesSettings.getExitLossPercentage1()).dividedBy(100);
-		// this.lossPercentage2 = Decimal.valueOf(strategiesSettings.getExitLossPercentage2()).dividedBy(100);
-		// this.lossPercentage3 = Decimal.valueOf(strategiesSettings.getExitLossPercentage3()).dividedBy(100);
+		// this.lossPercentage2 =
+		// Decimal.valueOf(strategiesSettings.getExitLossPercentage2()).dividedBy(100);
+		// this.lossPercentage3 =
+		// Decimal.valueOf(strategiesSettings.getExitLossPercentage3()).dividedBy(100);
 
 		this.feePercentage = feePercentage.dividedBy(100);
 
 		this.strategiesSettings = strategiesSettings;
 
-		log.debug("feePercentage: {} gainPercentage1: {} lossPercentage1: {}", this.feePercentage, gainPercentage1, lossPercentage1);
+		log.debug("feePercentage: {} gainPercentage1: {} lossPercentage1: {}", this.feePercentage, gainPercentage1,
+				lossPercentage1);
 	}
 
 	@Override
@@ -56,7 +62,8 @@ public class TraillingStopLossExitRule extends AbstractRule {
 			if (tradingRecord.getCurrentTrade().isClosed()) {
 				log.trace("trade is closed");
 			} else {
-				if (tradingRecord.getCurrentTrade().getEntry() != null && tradingRecord.getCurrentTrade().getEntry().getAmount() != null) {
+				if (tradingRecord.getCurrentTrade().getEntry() != null
+						&& tradingRecord.getCurrentTrade().getEntry().getAmount() != null) {
 
 					log.trace("index: {}", tradingRecord.getLastEntry().getIndex());
 					highPrice = getHighPrice(index, tradingRecord, closePriceIndicator);
@@ -71,15 +78,14 @@ public class TraillingStopLossExitRule extends AbstractRule {
 						result = true;
 					}
 
-					log.debug("rulex0 :: {} <= {} AND {} <= {} -> {}", NumericFunctions.convertToBigDecimal(hb, NumericFunctions.PERCENTAGE_SCALE),
-							gainPercentage1, NumericFunctions.convertToBigDecimal(gainPercentage1, NumericFunctions.PERCENTAGE_SCALE),
+					log.debug("rule :: {} <= {} AND {} <= {} -> {}",
+							NumericFunctions.convertToBigDecimal(hb, NumericFunctions.PERCENTAGE_SCALE),
+							NumericFunctions.convertToBigDecimal(gainPercentage1, NumericFunctions.PERCENTAGE_SCALE),
 							NumericFunctions.convertToBigDecimal(closePrice, NumericFunctions.PRICE_SCALE),
 							NumericFunctions.convertToBigDecimal(rule10, NumericFunctions.PRICE_SCALE), result);
-					log.debug("\t\tcp: {} bp: {} hp: {} hb: {} hpl: {}",
-							NumericFunctions.convertToBigDecimal(closePrice, NumericFunctions.PRICE_SCALE),
+					log.debug("\t\tbp: {} hp: {} hpl: {}",
 							NumericFunctions.convertToBigDecimal(buyPrice, NumericFunctions.PRICE_SCALE),
 							NumericFunctions.convertToBigDecimal(highPrice, NumericFunctions.PRICE_SCALE),
-							NumericFunctions.convertToBigDecimal(hb, NumericFunctions.PERCENTAGE_SCALE),
 							NumericFunctions.convertToBigDecimal(highPriceLossValue, NumericFunctions.PRICE_SCALE));
 
 				}

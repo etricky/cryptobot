@@ -14,6 +14,7 @@ import com.etricky.cryptobot.core.strategies.rules.TraillingStopLossExitRule;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
+// must be prototype as some indicator stores values in a cache
 @Scope("prototype")
 @Slf4j
 public class TrailingStopLossStrategy extends AbstractStrategy {
@@ -24,14 +25,14 @@ public class TrailingStopLossStrategy extends AbstractStrategy {
 	public void createStrategy() {
 		log.debug("start");
 
-		ClosePriceIndicator closePrice = new ClosePriceIndicator(getTimeSeries());
+		ClosePriceIndicator closePrice = new ClosePriceIndicator(timeSeries);
 
-		Rule entryRule = new TraillingStopLossEntryRule(closePrice, Decimal.valueOf(getFeePercentage()), strategiesSettings);
+		Rule entryRule = new TraillingStopLossEntryRule(closePrice, Decimal.valueOf(feePercentage), strategiesSettings);
 
-		Rule exitRule = new TraillingStopLossExitRule(closePrice, Decimal.valueOf(getFeePercentage()), strategiesSettings);
+		Rule exitRule = new TraillingStopLossExitRule(closePrice, Decimal.valueOf(feePercentage), strategiesSettings);
 
-		setStrategy(new BaseStrategy(getBeanName(), entryRule, exitRule,
-				strategiesSettings.getInitialPeriod().intValue() / strategiesSettings.getBarDurationSec().intValue()));
+		strategy = new BaseStrategy(beanName, entryRule, exitRule,
+				strategiesSettings.getInitialPeriod().intValue() / strategiesSettings.getBarDurationSec().intValue());
 
 		log.debug("done");
 	}

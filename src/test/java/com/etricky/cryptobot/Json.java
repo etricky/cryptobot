@@ -9,7 +9,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ResourceUtils;
 
-import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
+import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFilesReader;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -70,7 +70,7 @@ public class Json {
 
 			Arrays.asList(exchanges).forEach(e -> {
 				System.out.println("name:" + e.getName());
-				e.getCurrencies().forEach(c -> {
+				e.getCurrencyPairs().forEach(c -> {
 					System.out.println("base:" + c.getBase_currency());
 					System.out.println("quote:" + c.getQuote_currency());
 				});

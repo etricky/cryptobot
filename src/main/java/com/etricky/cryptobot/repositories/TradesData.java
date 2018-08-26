@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
-import com.etricky.cryptobot.model.TradesEntity;
+import com.etricky.cryptobot.model.TradeEntity;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -104,10 +104,10 @@ public class TradesData {
 		return Optional.ofNullable(tradeGapList);
 	}
 
-	public List<TradesEntity> getTradesInPeriod(String exchange, String currency, long startPeriod, long endPeriod, boolean includeFake) {
+	public List<TradeEntity> getTradesInPeriod(String exchange, String currency, long startPeriod, long endPeriod, boolean includeFake) {
 		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{} includeFake: {}", exchange, currency, startPeriod,
 				DateFunctions.getStringFromUnixTime(startPeriod), endPeriod, DateFunctions.getStringFromUnixTime(endPeriod), includeFake);
-		List<TradesEntity> tradesList;
+		List<TradeEntity> tradesList;
 
 		if (includeFake) {
 			tradesList = tradesEntityRepository.getAllTradesInPeriod(exchange, currency, startPeriod, endPeriod);

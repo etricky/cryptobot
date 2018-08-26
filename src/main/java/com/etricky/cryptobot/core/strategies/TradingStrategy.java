@@ -15,6 +15,7 @@ import com.etricky.cryptobot.core.strategies.common.AbstractStrategy;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
+// must be prototype as some indicator stores values in a cache
 @Scope("prototype")
 @Slf4j
 public class TradingStrategy extends AbstractStrategy {
@@ -26,16 +27,14 @@ public class TradingStrategy extends AbstractStrategy {
 
 		log.debug("start");
 
-		ClosePriceIndicator closePrice = new ClosePriceIndicator(getTimeSeries());
+		ClosePriceIndicator closePrice = new ClosePriceIndicator(timeSeries);
 		TripleEMAIndicator tema = new TripleEMAIndicator(closePrice, strategiesSettings.getTimeFrameShort().intValue());
 		DoubleEMAIndicator dema = new DoubleEMAIndicator(closePrice, strategiesSettings.getTimeFrameLong().intValue());
 
-		// Rule entryRule = new CrossedUpIndicatorRule(dema, tema);
-		// Rule exitRule = new CrossedDownIndicatorRule(dema, tema);
 		Rule entryRule = new CrossedUpIndicatorRule(tema, dema);
 		Rule exitRule = new CrossedDownIndicatorRule(tema, dema);
-		setStrategy(new BaseStrategy(getBeanName(), entryRule, exitRule,
-				strategiesSettings.getInitialPeriod().intValue() / strategiesSettings.getBarDurationSec().intValue()));
+		strategy = new BaseStrategy(beanName, entryRule, exitRule,
+				strategiesSettings.getInitialPeriod().intValue() / strategiesSettings.getBarDurationSec().intValue());
 
 		log.debug("done");
 	}

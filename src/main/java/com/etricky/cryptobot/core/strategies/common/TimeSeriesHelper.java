@@ -10,8 +10,8 @@ import org.ta4j.core.Decimal;
 import org.ta4j.core.TimeSeries;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
-import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
-import com.etricky.cryptobot.model.TradesEntity;
+import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.model.TradeEntity;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,8 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 public class TimeSeriesHelper {
 
 	private BaseBar cachedBar;
+	private TradeEntity errorTrade;
 
-	private ZonedDateTime calculateBarEndTime(TradesEntity tradesEntity, int barDuration) throws ExchangeException {
+	private ZonedDateTime calculateBarEndTime(TradeEntity tradesEntity, int barDuration) throws ExchangeException {
 		ZonedDateTime returnTime = null;
 		int tradeMinute, tradeHour, endTime, barDurationAux;
 		log.trace("start. barDuration: {}", barDuration);
@@ -71,7 +72,8 @@ public class TimeSeriesHelper {
 			barDurationAux = barDuration / 60 / 60 / 24 - 1; // in days. Includes the day of the trade
 			tradeMinute = tradesEntity.getTimestamp().getMinute();
 			tradeHour = tradesEntity.getTimestamp().getHour();
-			returnTime = tradesEntity.getTimestamp().minusHours(tradeHour).minusMinutes(tradeMinute).plusDays(barDurationAux);
+			returnTime = tradesEntity.getTimestamp().minusHours(tradeHour).minusMinutes(tradeMinute)
+					.plusDays(barDurationAux);
 
 			log.trace("returnTime: {}", DateFunctions.getStringFromZDT(returnTime));
 		}
@@ -80,57 +82,83 @@ public class TimeSeriesHelper {
 		return returnTime;
 	}
 
-	public boolean addTradeToTimeSeries(TimeSeries timeSeries, TradesEntity tradesEntity, int barDuration) throws ExchangeException {
-		boolean barAdded = false, cachedBaAddedr = false;
-		log.trace("start. timeSeries: {} tradesEntity: {} barDuration: {}", timeSeries.getName(), tradesEntity, barDuration);
+	public boolean addTradeToTimeSeries(TimeSeries timeSeries, TradeEntity tradesEntity, int barDuration)
+			throws ExchangeException {
+		boolean barAdded = false, cachedBarAdded = false;
+		log.trace("start. timeSeries: {} tradesEntity: {} barDuration: {}", timeSeries.getName(), tradesEntity,
+				barDuration);
 
-		if (tradesEntity.isFakeTrade()) {
-			log.trace("fake trade, not adding a bar");
-		} else {
-
-			if (barDuration > 60) {
-				// checks if there's a bar for the current time
-				if (cachedBar == null) {
-
-					cachedBar = new BaseBar(Duration.ofSeconds(barDuration), calculateBarEndTime(tradesEntity, barDuration),
-							Decimal.valueOf(tradesEntity.getOpenPrice()), Decimal.valueOf(tradesEntity.getHighPrice()),
-							Decimal.valueOf(tradesEntity.getLowPrice()), Decimal.valueOf(tradesEntity.getClosePrice()), Decimal.ONE);
-
-					log.trace("created new cached bar. endTime: {}", DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
-				}
-
-				// verifies if current trade belongs to cached bar or must create a new
-				if (tradesEntity.getTimestamp().isBefore(cachedBar.getEndTime())) {
-					log.trace("adding trade in cached bar. endTime: {}", DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
-
-					cachedBar.addTrade(Decimal.ONE, Decimal.valueOf(tradesEntity.getClosePrice()));
-
-				} else {
-					log.trace("adding cached bar to timeseries {}", timeSeries.getName());
-					timeSeries.addBar(cachedBar);
-					barAdded = true;
-					cachedBaAddedr = true;
-
-					cachedBar = new BaseBar(Duration.ofSeconds(barDuration), calculateBarEndTime(tradesEntity, barDuration),
-							Decimal.valueOf(tradesEntity.getOpenPrice()), Decimal.valueOf(tradesEntity.getHighPrice()),
-							Decimal.valueOf(tradesEntity.getLowPrice()), Decimal.valueOf(tradesEntity.getClosePrice()), Decimal.ONE);
-
-					log.trace("created new cached bar. endTime: {}", DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
-				}
+		try {
+			if (tradesEntity.isFakeTrade()) {
+				log.trace("fake trade, not adding a bar");
 			} else {
-				// a trade is created every 60s so it should be added to the timeSeries
-				BaseBar bar = new BaseBar(Duration.ofSeconds(barDuration), tradesEntity.getTimestamp().plusSeconds(barDuration),
-						Decimal.valueOf(tradesEntity.getOpenPrice()), Decimal.valueOf(tradesEntity.getHighPrice()),
-						Decimal.valueOf(tradesEntity.getLowPrice()), Decimal.valueOf(tradesEntity.getClosePrice()), Decimal.ONE);
 
-				timeSeries.addBar(bar);
-				barAdded = true;
+				if (barDuration > 60) {
+					// checks if there's a bar for the current time
+					if (cachedBar == null) {
 
-				log.trace("added new bar to timeseries {} endTime: {}", timeSeries.getName(), DateFunctions.getStringFromZDT(bar.getEndTime()));
+						cachedBar = new BaseBar(Duration.ofSeconds(barDuration),
+								calculateBarEndTime(tradesEntity, barDuration),
+								Decimal.valueOf(tradesEntity.getOpenPrice()),
+								Decimal.valueOf(tradesEntity.getHighPrice()),
+								Decimal.valueOf(tradesEntity.getLowPrice()),
+								Decimal.valueOf(tradesEntity.getClosePrice()), Decimal.ONE);
+
+						log.trace("created new cached bar. endTime: {}",
+								DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
+					}
+
+					// verifies if current trade belongs to cached bar or must create a new
+					if (tradesEntity.getTimestamp().isBefore(cachedBar.getEndTime())) {
+						log.trace("adding trade in cached bar. endTime: {}",
+								DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
+
+						cachedBar.addTrade(Decimal.ONE, Decimal.valueOf(tradesEntity.getClosePrice()));
+
+					} else {
+						log.trace("adding cached bar to timeseries {}", timeSeries.getName());
+						timeSeries.addBar(cachedBar);
+						barAdded = true;
+						cachedBarAdded = true;
+
+						cachedBar = new BaseBar(Duration.ofSeconds(barDuration),
+								calculateBarEndTime(tradesEntity, barDuration),
+								Decimal.valueOf(tradesEntity.getOpenPrice()),
+								Decimal.valueOf(tradesEntity.getHighPrice()),
+								Decimal.valueOf(tradesEntity.getLowPrice()),
+								Decimal.valueOf(tradesEntity.getClosePrice()), Decimal.ONE);
+
+						log.trace("created new cached bar. endTime: {}",
+								DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
+					}
+				} else {
+					// a trade is created every 60s so it should be added to the timeSeries
+					BaseBar bar = new BaseBar(Duration.ofSeconds(barDuration),
+							tradesEntity.getTimestamp().plusSeconds(barDuration),
+							Decimal.valueOf(tradesEntity.getOpenPrice()), Decimal.valueOf(tradesEntity.getHighPrice()),
+							Decimal.valueOf(tradesEntity.getLowPrice()), Decimal.valueOf(tradesEntity.getClosePrice()),
+							Decimal.ONE);
+
+					timeSeries.addBar(bar);
+					barAdded = true;
+
+					log.trace("added new bar to timeseries {} endTime: {}", timeSeries.getName(),
+							DateFunctions.getStringFromZDT(bar.getEndTime()));
+				}
 			}
-		}
 
-		log.trace("done. trade: {} barAdded: {} cached: {}", tradesEntity, barAdded, cachedBaAddedr);
-		return barAdded;
+			log.trace("done. trade: {} barAdded: {} cached: {}", tradesEntity, barAdded, cachedBarAdded);
+			return barAdded;
+		} catch (ExchangeException e1) {
+			if (e1.getMessage().equalsIgnoreCase("Cannot add a bar with end time <= to series end time")
+					&& errorTrade.equals(tradesEntity)) {
+				log.warn("Igoring invalid bar: " + tradesEntity);
+				return false;
+			}
+
+			log.error("Exception: {}", e1);
+			log.error("trade: {}", tradesEntity);
+			throw e1;
+		}
 	}
 }

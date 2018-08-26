@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @Builder
 @AllArgsConstructor
 @Slf4j
-public class TradesEntity {
+public class TradeEntity {
 
 	@EmbeddedId
 	@NonNull
@@ -47,15 +47,15 @@ public class TradesEntity {
 	@Builder.Default
 	private boolean fakeTrade = false;
 
-	public TradesEntity getFake() {
-		return TradesEntity.builder().fakeTrade(true).closePrice(closePrice).openPrice(openPrice).highPrice(highPrice)
+	public TradeEntity getFake() {
+		return TradeEntity.builder().fakeTrade(true).closePrice(closePrice).openPrice(openPrice).highPrice(highPrice)
 				.lowPrice(lowPrice).timestamp(DateFunctions.getZDTfromUnixTime(tradeId.getUnixtime()))
 				.tradeId(ExchangePK.builder().currency(tradeId.getCurrency()).exchange(tradeId.getExchange())
 						.unixtime(tradeId.getUnixtime()).build())
 				.build();
 	}
 
-	public TradesEntity addMinute() {
+	public TradeEntity addMinute() {
 		tradeId.setUnixtime(tradeId.getUnixtime() + 60);
 		timestamp = DateFunctions.getZDTfromUnixTime(tradeId.getUnixtime());
 		log.trace("unixtime: {}/{}", tradeId.getUnixtime(), DateFunctions.getZDTfromUnixTime(tradeId.getUnixtime()));

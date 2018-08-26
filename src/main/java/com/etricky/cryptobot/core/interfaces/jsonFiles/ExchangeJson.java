@@ -15,11 +15,14 @@ public class ExchangeJson {
 	String name;
 	long HistoryDays;
 	BigDecimal fee;
-	ArrayList<Currency> currencies;
+	Boolean sandbox;
+	ArrayList<CurrencyPair> currencyPairs;
+	ArrayList<OrderMinimums> orderMinimums;
+	ArrayList<TradeConfigs> tradeConfigs;
 
 	@Getter
 	@Setter
-	public static class Currency {
+	public static class CurrencyPair {
 		String base_currency;
 		String quote_currency;
 
@@ -29,8 +32,30 @@ public class ExchangeJson {
 
 	}
 
-	public Map<String, Currency> getCurrenciesMap() {
-		return currencies.stream().collect(Collectors.toMap(Currency::getShortName, Function.identity()));
+	public Map<String, CurrencyPair> getCurrencyPairsMap() {
+		return currencyPairs.stream().collect(Collectors.toMap(CurrencyPair::getShortName, Function.identity()));
 	}
 
+	@Getter
+	@Setter
+	public static class OrderMinimums {
+		String currency;
+		String value;
+	}
+
+	public Map<String, OrderMinimums> getOrderMinimumMap() {
+		return orderMinimums.stream().collect(Collectors.toMap(OrderMinimums::getCurrency, Function.identity()));
+	}
+
+	@Getter
+	@Setter
+	public static class TradeConfigs {
+		String tradeName;
+		ArrayList<String> currencyPairs;
+		ArrayList<String> strategies;
+	}
+
+	public Map<String, TradeConfigs> getTradeConfigsMap() {
+		return tradeConfigs.stream().collect(Collectors.toMap(TradeConfigs::getTradeName, Function.identity()));
+	}
 }

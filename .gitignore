@@ -101,3 +101,4 @@ local.properties
 *.key.json
 /.dbeaver-data-sources.xml
 *.xlsx
+run.sh

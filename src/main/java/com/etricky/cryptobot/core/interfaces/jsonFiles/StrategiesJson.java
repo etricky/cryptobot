@@ -14,6 +14,7 @@ public class StrategiesJson {
 	Long timeSeriesBars;
 	Boolean entryEnabled;
 	Boolean exitEnabled;
+	Boolean allowMultiCurrency;
 
 	BigDecimal timeFrameLong;
 	BigDecimal timeFrameShort;

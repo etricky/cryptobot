@@ -9,7 +9,7 @@ import java.util.TimeZone;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.strategies.common.TimeSeriesHelper;
-import com.etricky.cryptobot.model.TradesEntity;
+import com.etricky.cryptobot.model.TradeEntity;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,9 +44,9 @@ public class TimeSeriesHelperTest {
 		ZonedDateTime zdt;
 		int aux;
 		TimeSeriesHelper tsh = new TimeSeriesHelper();
-		TradesEntity tradesEntity = new TradesEntity();
+		TradeEntity tradesEntity = new TradeEntity();
 
-		Method method = TimeSeriesHelper.class.getDeclaredMethod("calculateBarEndTime", TradesEntity.class, Integer.TYPE);
+		Method method = TimeSeriesHelper.class.getDeclaredMethod("calculateBarEndTime", TradeEntity.class, Integer.TYPE);
 		method.setAccessible(true);
 
 		zdt = DateFunctions.getZDTNow();

@@ -1,16 +1,18 @@
-package com.etricky.cryptobot.core.exchanges.common;
+package com.etricky.cryptobot.core.common.threads;
 
 import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.springframework.stereotype.Component;
 
+import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
+
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class ExchangeLock {
+public class ThreadLock {
 	private HashMap<String, ReentrantLock> lockMap = new HashMap<>();
 
 	public void getLock(@NonNull String exchange) throws ExchangeException {

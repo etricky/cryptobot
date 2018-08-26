@@ -1,6 +1,5 @@
 package com.etricky.cryptobot;
 
-import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.TimeZone;
 
@@ -58,6 +57,10 @@ public class CryptoBotApplication {
 			ctx.registerShutdownHook();
 		} catch (Exception e) {
 			log.error("Exception: {}", e);
+			if (ctx != null) {
+				ctx.close();
+			}
+			System.exit(ExitCode.EXIT_CODE_ERROR);
 		}
 	}
 
@@ -72,7 +75,7 @@ public class CryptoBotApplication {
 			ex.setExitCode(ExitCode.EXIT_CODE_ERROR);
 			commands.sendMessage("CryptoBot failed to start", true);
 			commands.terminate(ex);
-		} catch (IOException e) {
+		} catch (Exception e) {
 			log.error("Exception: {}", e);
 		} finally {
 			ctx.close();

@@ -24,15 +24,20 @@ public class TraillingStopLossEntryRule extends AbstractRule {
 
 	private StrategiesJson strategiesSettings;
 
-	public TraillingStopLossEntryRule(ClosePriceIndicator closePriceIndicator, Decimal feePercentage, StrategiesJson strategiesSettings) {
+	public TraillingStopLossEntryRule(ClosePriceIndicator closePriceIndicator, Decimal feePercentage,
+			StrategiesJson strategiesSettings) {
 		this.closePriceIndicator = closePriceIndicator;
 		this.gainPercentage1 = Decimal.valueOf(strategiesSettings.getEntryGainPercentage1()).dividedBy(100);
-		// this.gainPercentage2 = Decimal.valueOf(strategiesSettings.getEntryGainPercentage2()).dividedBy(100);
-		// this.gainPercentage3 = Decimal.valueOf(strategiesSettings.getEntryGainPercentage3()).dividedBy(100);
+		// this.gainPercentage2 =
+		// Decimal.valueOf(strategiesSettings.getEntryGainPercentage2()).dividedBy(100);
+		// this.gainPercentage3 =
+		// Decimal.valueOf(strategiesSettings.getEntryGainPercentage3()).dividedBy(100);
 
 		this.lossPercentage1 = Decimal.valueOf(strategiesSettings.getEntryLossPercentage1()).dividedBy(100);
-		// this.lossPercentage2 = Decimal.valueOf(strategiesSettings.getEntryLossPercentage2()).dividedBy(100);
-		// this.lossPercentage3 = Decimal.valueOf(strategiesSettings.getEntryLossPercentage3()).dividedBy(100);
+		// this.lossPercentage2 =
+		// Decimal.valueOf(strategiesSettings.getEntryLossPercentage2()).dividedBy(100);
+		// this.lossPercentage3 =
+		// Decimal.valueOf(strategiesSettings.getEntryLossPercentage3()).dividedBy(100);
 
 		this.feePercentage = feePercentage.dividedBy(100);
 
@@ -42,8 +47,8 @@ public class TraillingStopLossEntryRule extends AbstractRule {
 	@Override
 	public boolean isSatisfied(int index, TradingRecord tradingRecord) {
 		boolean result = false;
-		// IsRisingRule isRisingRule;
-		Decimal closePrice, sellPrice, lowPrice, feeValue, gainValue, amount, initialAmount, initialBalance, deltaAmount, rule10;
+		Decimal closePrice, sellPrice, lowPrice, feeValue, gainValue, amount, initialAmount, initialBalance,
+				deltaAmount, rule10;
 
 		if (strategiesSettings.getEntryEnabled()) {
 			log.trace("start. index: {}", index);
@@ -67,18 +72,23 @@ public class TraillingStopLossEntryRule extends AbstractRule {
 				amount = initialBalance.dividedBy(closePrice);
 				deltaAmount = amount.minus(initialAmount).dividedBy(amount);
 
+				// closePrice > lowPrice * gain && closePrice < sellPrice
+				// OR deltaAmount > loss
 				if (closePrice.isGreaterThanOrEqual(rule10) && closePrice.isLessThanOrEqual(sellPrice)
 						|| (deltaAmount.isNegative() && deltaAmount.abs().isGreaterThanOrEqual(lossPercentage1))) {
 					result = true;
 				}
 
-				log.debug("{} >= {} && cp < {} || {} >= {} -> {}", NumericFunctions.convertToBigDecimal(closePrice, NumericFunctions.PRICE_SCALE),
+				log.debug("rule :: {} >= {} && cp < {} || {} >= {} -> {}",
+						NumericFunctions.convertToBigDecimal(closePrice, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(rule10, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(sellPrice, NumericFunctions.PRICE_SCALE),
-						NumericFunctions.convertToBigDecimal(deltaAmount.abs(), NumericFunctions.PERCENTAGE_SCALE), lossPercentage1, result);
-				log.debug("\t\tsp:{} lp: {} fee: {}", NumericFunctions.convertToBigDecimal(lowPrice, NumericFunctions.PRICE_SCALE),
-						NumericFunctions.convertToBigDecimal(sellPrice, NumericFunctions.PRICE_SCALE),
+						NumericFunctions.convertToBigDecimal(deltaAmount.abs(), NumericFunctions.PERCENTAGE_SCALE),
+						NumericFunctions.convertToBigDecimal(lossPercentage1, NumericFunctions.PERCENTAGE_SCALE),
+						result);
+				log.debug("\t\tlp:{} sp: {} fee: {}",
 						NumericFunctions.convertToBigDecimal(lowPrice, NumericFunctions.PRICE_SCALE),
+						NumericFunctions.convertToBigDecimal(sellPrice, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(feeValue, NumericFunctions.PRICE_SCALE));
 
 			} else {

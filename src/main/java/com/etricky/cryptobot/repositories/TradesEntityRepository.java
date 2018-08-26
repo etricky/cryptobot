@@ -8,10 +8,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.etricky.cryptobot.model.TradesEntity;
+import com.etricky.cryptobot.model.TradeEntity;
 import com.etricky.cryptobot.model.ExchangePK;
 
-public interface TradesEntityRepository extends CrudRepository<TradesEntity, ExchangePK> {
+public interface TradesEntityRepository extends CrudRepository<TradeEntity, ExchangePK> {
 
 	/**
 	 * Returns the first and last entries in the database. If no data then returns 0
@@ -61,7 +61,7 @@ public interface TradesEntityRepository extends CrudRepository<TradesEntity, Exc
 	 * @return
 	 */
 	@Query(value = "SELECT * FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME <= ?4 AND FAKE_TRADE = FALSE", nativeQuery = true)
-	List<TradesEntity> getTradesInPeriodNoFake(String exchange, String currency, long startDataUnixTime, long endDataUnixTime);
+	List<TradeEntity> getTradesInPeriodNoFake(String exchange, String currency, long startDataUnixTime, long endDataUnixTime);
 
 	/**
 	 * Returns all trades, fake or not, in the specified period
@@ -73,5 +73,5 @@ public interface TradesEntityRepository extends CrudRepository<TradesEntity, Exc
 	 * @return
 	 */
 	@Query(value = "SELECT * FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME <= ?4", nativeQuery = true)
-	List<TradesEntity> getAllTradesInPeriod(String exchange, String currency, long startDataUnixTime, long endDataUnixTime);
+	List<TradeEntity> getAllTradesInPeriod(String exchange, String currency, long startDataUnixTime, long endDataUnixTime);
 }

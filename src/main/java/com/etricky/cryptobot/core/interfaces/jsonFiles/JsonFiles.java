@@ -7,9 +7,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.etricky.cryptobot.core.exchanges.common.ExchangeException;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
+import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,7 +20,7 @@ public class JsonFiles {
 	JsonFilesReader jsonReader;
 	StrategiesJson[] strategiesJson;
 
-	public JsonFiles(JsonFilesReader jsonReader) throws JsonParseException, JsonMappingException, ExchangeException {
+	public JsonFiles(JsonFilesReader jsonReader) throws ExchangeException {
 		log.debug("start");
 
 		this.jsonReader = jsonReader;
@@ -51,7 +49,7 @@ public class JsonFiles {
 		return settingsJson;
 	}
 
-	public void loadFiles() throws JsonParseException, JsonMappingException, ExchangeException {
+	public void loadFiles() throws ExchangeException {
 		log.debug("start");
 
 		exchangesJson = jsonReader.getJsonObject("exchanges.json", ExchangeJson[].class);
@@ -60,5 +58,11 @@ public class JsonFiles {
 		settingsJson = jsonReader.getJsonObject("settings.json", SettingsJson.class);
 
 		log.debug("done");
+	}
+
+	public ExchangeKeys getExchangeKeys(String exchange) throws ExchangeException {
+		log.debug("exchange: {}", exchange);
+
+		return jsonReader.getJsonObject(exchange.toLowerCase() + ".key.json", ExchangeKeys.class);
 	}
 }

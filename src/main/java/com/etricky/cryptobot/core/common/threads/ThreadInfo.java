@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.core.exchanges.common;
+package com.etricky.cryptobot.core.common.threads;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 
@@ -15,12 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ThreadInfo {
 
 	@NonNull
-	private ExchangeEnum exchangeEnum;
-	@NonNull
-	private CurrencyEnum currencyEnum;
-	@NonNull
-	private AbstractExchange exchangeGeneric;
-	@NonNull
 	private String threadName;
 	private Thread thread;
 
@@ -35,14 +29,16 @@ public class ThreadInfo {
 		log.debug("start. thread: {} id: {} state: {} current thread: {} id: {}", threadName, thread.getId(),
 				thread.getState(), Thread.currentThread().getName(), Thread.currentThread().getId());
 
-		thread.interrupt();
+		if (thread.isInterrupted()) {
+			log.debug("thread is already interrupted");
+		} else {
+			if (!thread.isAlive()) {
+				log.debug("thread is not alived!");
+			} else {
+				thread.interrupt();
+			}
 
-		if (thread.isInterrupted())
-			log.debug("thread is interrupted");
-		else {
-			log.debug("thread still lives!!!");
+			log.debug("done");
 		}
-		log.debug("done");
 	}
-
 }
