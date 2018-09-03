@@ -39,7 +39,6 @@ public abstract class AbstractStrategy {
 	@Autowired
 	TimeSeriesHelper timeSeriesHelper;
 
-	@Getter
 	protected TimeSeries timeSeries;
 	@Getter
 	protected String beanName;
@@ -109,7 +108,7 @@ public abstract class AbstractStrategy {
 		int endIndex, result = NO_ACTION;
 		Bar lastBar;
 
-		log.trace("start. timeSeries: {}", timeSeries.getName());
+		log.trace("start. currency: {} timeSeries: {}", tradeEntity.getTradeId().getCurrency(), timeSeries.getName());
 
 		// adds live trade to strategy time series and executes the strategies
 		// considering the currency tradingRecord
@@ -127,8 +126,9 @@ public abstract class AbstractStrategy {
 
 				// fills the strategy trading record that will be used by exchangeTrade
 				currencyTradingRecord.enter(currencyTimeSeriesEndIndex, lastBar.getClosePrice(), Decimal.ONE);
-				log.debug("ENTER -> strategy {} price: {} indexes: {}/{}", strategy.getName(),
-						tradeEntity.getClosePrice(), endIndex, currencyTimeSeriesEndIndex);
+				log.debug("ENTER -> strategy {} currency: {} price: {} indexes: {}/{}", strategy.getName(),
+						tradeEntity.getTradeId().getCurrency(), tradeEntity.getClosePrice(), endIndex,
+						currencyTimeSeriesEndIndex);
 				result = ENTER;
 
 			} else if (currencyTradingRecord.getCurrentTrade().isOpened()
@@ -136,8 +136,9 @@ public abstract class AbstractStrategy {
 				// strategy should exit
 
 				currencyTradingRecord.exit(currencyTimeSeriesEndIndex, lastBar.getClosePrice(), Decimal.ONE);
-				log.debug("EXIT -> strategy {} price: {} indexes s/c: {}/{}", strategy.getName(),
-						tradeEntity.getClosePrice(), endIndex, currencyTimeSeriesEndIndex);
+				log.debug("EXIT -> strategy {} currency: {} price: {} indexes s/c: {}/{}", strategy.getName(),
+						tradeEntity.getTradeId().getCurrency(), tradeEntity.getClosePrice(), endIndex,
+						currencyTimeSeriesEndIndex);
 				result = EXIT;
 			}
 
@@ -148,7 +149,7 @@ public abstract class AbstractStrategy {
 		strategyResult = StrategyResult.builder().result(result).strategyName(beanName).barDuration(barDuration)
 				.tradeEntity(tradeEntity).closePrice(tradeEntity.getClosePrice())
 				.timeSeriesEndIndex(currencyTimeSeriesEndIndex).highPrice(highPrice).lowPrice(lowPrice)
-				.feePercentage(feePercentage).build().tradingRecord(currencyTradingRecord);
+				.feePercentage(feePercentage).lastOrder(currencyTradingRecord.getLastOrder()).build();
 
 		setHighPrice(highPrice, result);
 		setLowPrice(lowPrice, result);

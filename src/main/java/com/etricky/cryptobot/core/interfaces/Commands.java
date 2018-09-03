@@ -46,8 +46,6 @@ public class Commands {
 	ExchangeThreads exchangeThreads;
 	@Autowired
 	JsonFiles jsonFiles;
-	@Autowired
-	AbstractExchangeAccount abstractExchangeAccount;
 
 	private String auxString = null;
 	private boolean validCommand;
@@ -211,6 +209,8 @@ public class Commands {
 
 		try {
 			if (validateTrade(exchange)) {
+				AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
+						.getBean(exchange);
 				sendMessage(abstractExchangeAccount.getWalletInfo(), true);
 			}
 		} catch (IOException e) {

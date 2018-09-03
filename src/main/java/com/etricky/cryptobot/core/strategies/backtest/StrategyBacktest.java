@@ -63,11 +63,11 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 
 	private List<BacktestEntity> backtestEntityList = new ArrayList<>();
 	private Map<String, BacktestResultsEntity> backtestResultsMap = new HashMap<>();
+	private Map<String, BacktestMetaData> backtestResultsMetaDataMap = new HashMap<>();
 	private List<String> tradeCurrencies;
 	private List<TradeEntity> dbTradesEntityList = new ArrayList<TradeEntity>();
 
 	private List<BacktestOrderInfo> currencyOrderInfoList = new ArrayList<>();
-	private List<BacktestOrderInfo> currencyOrderInfoListAux = new ArrayList<>();
 	private Map<String, List<BacktestOrderInfo>> backtestCurrencyOrderInfoMap = new TreeMap<>();
 
 	private List<BacktestOrderInfo> tradeOrderInfoList = new ArrayList<>();
@@ -75,12 +75,11 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 	private Map<ZonedDateTime, BacktestOrderInfo> timeBasedCurrencyOrderInfoMap = new TreeMap<>();
 
 	private ExchangeEnum exchangeEnum;
-	private CurrencyEnum currencyEnum;
 	private ExchangeTrade exchangeTrade;
 	private BacktestMetaData backtestMetaData;
 	private AnalysisCriterion criterion;
 
-	private String tradeName, currencyName, auxCurrencyName;
+	private String tradeName, currencyName;
 	private final String TRADE_KEY = "trade_key";
 	private long startDateUnixTime, endDateUnixTime, backtestStart;
 	private Double criterionValue;
@@ -155,8 +154,8 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 
 		// for each currency executes the strategies
 		exchangeTrade.getExchangeCurrencyTradeMap().values().forEach(abstractTrading -> {
-			currencyEnum = abstractTrading.getCurrencyEnum();
-			currencyName = currencyEnum.getShortName();
+			CurrencyEnum currencyEnum = abstractTrading.getCurrencyEnum();
+			String currencyName = currencyEnum.getShortName();
 
 			// load trades from BD for the currency
 			dbTradesEntityList = tradesData.getTradesInPeriod(exchangeEnum.getName(), currencyName, startDateUnixTime,
@@ -203,9 +202,8 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 			}
 
 			// for each currency, stores the orders
-			currencyOrderInfoListAux.addAll(currencyOrderInfoList);
-			backtestCurrencyOrderInfoMap.put(currencyName, currencyOrderInfoListAux);
-			currencyOrderInfoList.clear();
+			backtestCurrencyOrderInfoMap.put(currencyName, currencyOrderInfoList);
+			currencyOrderInfoList = new ArrayList<>();
 		});
 
 		log.debug("done with currencies, executing trade");
@@ -244,25 +242,28 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 				.negBalanceOrders(backtestMetaData.getNegBalanceOrders())
 				.posAmountOrders(backtestMetaData.getPosAmountOrders())
 				.negAmountOrders(backtestMetaData.getNegAmountOrders()).totalOrders(backtestMetaData.getTotalOrders())
-				.tradingBuys(backtestMetaData.getTradingBuys()).tradingSells(backtestMetaData.getTradingSells())
-				.stopLossBuys(backtestMetaData.getStopLossBuys()).stopLossSells(backtestMetaData.getStopLossSells())
-				.totalFees(backtestMetaData.getTotalFees()).build());
+				.currencyOrders(backtestMetaData.getCurrencyOrders()).tradingBuys(backtestMetaData.getTradingBuys())
+				.tradingSells(backtestMetaData.getTradingSells()).stopLossBuys(backtestMetaData.getStopLossBuys())
+				.stopLossSells(backtestMetaData.getStopLossSells()).totalFees(backtestMetaData.getTotalFees()).build());
+
+		backtestResultsMetaDataMap.put(key, backtestMetaData);
 	}
 
 	private void processAndPrintBacktestData() {
 		log.debug("start");
-		auxCurrencyName = null;
+		currencyName = null;
 
 		backtestCurrencyOrderInfoMap.forEach((currName, orderInfoList) -> {
 			backtestMetaData = new BacktestMetaData();
 
 			orderInfoList.forEach((orderInfo) -> {
-				if (auxCurrencyName == null || !auxCurrencyName.equals(currName)) {
+				if (currencyName == null || !currencyName.equals(currName)) {
 					log.info("-----------");
 					log.info("CURRENCY ORDERS: {}", currName);
 					log.info("-----------");
-					auxCurrencyName = currName;
+					currencyName = currName;
 				}
+
 				backtestMetaData.calculateMetaData(orderInfo);
 
 				// stores the backtest data for each currency in the database
@@ -274,7 +275,7 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 						.strategy(orderInfo.getStrategyResult().getStrategyName())
 						.ordertime(orderInfo.getStrategyResult().getTradeEntity().getTimestamp())
 						.orderUnixTime(orderInfo.getStrategyResult().getTradeEntity().getTradeId().getUnixtime())
-						.orderType(orderInfo.getStrategyResult().getLastEntry().getType())
+						.orderType(orderInfo.getStrategyResult().getLastOrder().getType())
 						.closePrice(orderInfo.getStrategyResult().getClosePrice())
 						.highPrice(orderInfo.getStrategyResult().getHighPrice())
 						.lowPrice(orderInfo.getStrategyResult().getLowPrice())
@@ -313,7 +314,7 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 					.strategy(orderInfo.getStrategyResult().getStrategyName())
 					.ordertime(orderInfo.getStrategyResult().getTradeEntity().getTimestamp())
 					.orderUnixTime(orderInfo.getStrategyResult().getTradeEntity().getTradeId().getUnixtime())
-					.orderType(orderInfo.getStrategyResult().getLastEntry().getType())
+					.orderType(orderInfo.getStrategyResult().getLastOrder().getType())
 					.closePrice(orderInfo.getStrategyResult().getClosePrice())
 					.highPrice(orderInfo.getStrategyResult().getHighPrice())
 					.lowPrice(orderInfo.getStrategyResult().getLowPrice())
@@ -343,8 +344,12 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 			log.info("-----------");
 			log.info("CURRENCY PROFIT: {}", currName);
 			log.info("-----------");
+			log.info("balance: {}/{} amount: {}/{}", backtestResultsMap.get(currName).getFinalBalance(),
+					backtestResultsMap.get(currName).getInitialBalance(),
+					backtestResultsMap.get(currName).getFinalAmount(),
+					backtestResultsMap.get(currName).getInitialAmount());
 
-			backtestResultsMap.get(currName).printMetaData();
+			backtestResultsMetaDataMap.get(currName).printMetaData();
 
 			// set and run analysis criteria
 			criterion = new TotalProfitCriterion();
@@ -369,8 +374,12 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 		log.info("-----------");
 		log.info("TRADE PROFIT: {}", tradeName);
 		log.info("-----------");
+		log.info("balance: {}/{} amount: {}/{}", backtestResultsMap.get(TRADE_KEY).getFinalBalance(),
+				backtestResultsMap.get(TRADE_KEY).getInitialBalance(),
+				backtestResultsMap.get(TRADE_KEY).getFinalAmount(),
+				backtestResultsMap.get(TRADE_KEY).getInitialAmount());
 
-		backtestResultsMap.get(TRADE_KEY).printMetaData();
+		backtestResultsMetaDataMap.get(TRADE_KEY).printMetaData();
 
 		// set and run analysis criteria
 		criterion = new TotalProfitCriterion();

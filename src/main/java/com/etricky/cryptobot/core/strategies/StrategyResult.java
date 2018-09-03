@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 
 import org.ta4j.core.Order;
 import org.ta4j.core.Order.OrderType;
-import org.ta4j.core.TradingRecord;
 
 import com.etricky.cryptobot.core.common.NumericFunctions;
 import com.etricky.cryptobot.core.strategies.common.AbstractStrategy;
@@ -39,14 +38,7 @@ public class StrategyResult {
 	private BigDecimal feePercentage = BigDecimal.ZERO;
 
 	private BigDecimal feeValue;
-	private Order lastOrder, lastEntry, lastExit;
-
-	public StrategyResult tradingRecord(TradingRecord tradingRecord) {
-		this.lastEntry = tradingRecord.getLastEntry();
-		this.lastExit = tradingRecord.getLastExit();
-		this.lastOrder = tradingRecord.getLastOrder();
-		return this;
-	}
+	private Order lastOrder;
 
 	public void setBalanceAndAmount(BigDecimal previousBalance, BigDecimal previousAmount) {
 		BigDecimal deltaBalance;

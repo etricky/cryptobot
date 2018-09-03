@@ -28,10 +28,10 @@ public class NumericFunctions {
 		if (baseValue.compareTo(BigDecimal.ZERO) == 0) {
 			return BigDecimal.ZERO;
 		} else if (delta) {
-			return value.multiply(_100).divide(baseValue, MC_PER).subtract(_100).setScale(PERCENTAGE_SCALE,
+			return value.subtract(baseValue).divide(baseValue, MC_PER).multiply(_100).setScale(PERCENTAGE_SCALE,
 					ROUNDING_MODE);
 		} else {
-			return value.multiply(_100).divide(baseValue, MC_PER).setScale(PERCENTAGE_SCALE, ROUNDING_MODE);
+			return baseValue.multiply(value).divide(_100, MC_PER).setScale(PERCENTAGE_SCALE, ROUNDING_MODE);
 		}
 	}
 

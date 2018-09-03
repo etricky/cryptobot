@@ -2,3 +2,4 @@
 @param backtest    If this method is being invoked by a backtest
 @param tradeEntity The trade values reported by the exchange
 @param strategy    Strategy that is being executed
+@param barDuration Duration of each bar of the time series

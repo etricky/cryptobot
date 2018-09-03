@@ -3,6 +3,7 @@ package com.etricky.cryptobot.core.exchanges.common;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.ta4j.core.BaseTimeSeries;
 import org.ta4j.core.BaseTradingRecord;
@@ -46,8 +47,7 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 	private TimeSeriesHelper timeSeriesHelper;
 	private StrategyResult strategyResult, auxStrategyResult;
 	private int lowestBar = 0;
-	@Getter
-	private HashMap<String, AbstractStrategy> strategiesMap;
+	private Map<String, AbstractStrategy> strategiesMap = new HashMap<>();
 	@Getter
 	protected TradingRecord currencyTradingRecord;
 	@Getter
@@ -74,7 +74,6 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 		this.currencyTimeSeries = new BaseTimeSeries(currencyEnum.getShortName());
 		this.currencyTradingRecord = new BaseTradingRecord();
 		liveTradeProperty = new PropertyChangeSupport(this);
-		strategiesMap = new HashMap<>();
 
 		log.debug("done");
 	}

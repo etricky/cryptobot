@@ -30,9 +30,10 @@ public class BacktestOrderInfo {
 				strategyResult.getTradeEntity().getTradeId().getUnixtime(),
 				strategyResult.getTradeEntity().getTimestamp());
 
-		log.info("strategy: {} order:: type: {} price: {} amount: {} balance: {} fee: {}",
-				strategyResult.getStrategyName(), strategyResult.getLastEntry().getType(),
-				strategyResult.getClosePrice(), amount, balance, feeValue);
+		log.info("strategy: {} order:: type: {} currency: {} price: {} amount: {} balance: {} fee: {}",
+				strategyResult.getStrategyName(), strategyResult.getLastOrder().getType(),
+				strategyResult.getTradeEntity().getTradeId().getCurrency(), strategyResult.getClosePrice(), amount,
+				balance, feeValue);
 
 		log.info("order deltas ----");
 
