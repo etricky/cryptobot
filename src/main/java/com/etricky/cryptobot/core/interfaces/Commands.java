@@ -113,7 +113,7 @@ public class Commands {
 			}
 
 			if (validCommand) {
-				sendMessage("Starting backtest for exchange: " + exchange + " currency: " + tradeName + " historyDays: "
+				sendMessage("Starting backtest for exchange: " + exchange + " trade: " + tradeName + " historyDays: "
 						+ historyDays + " startDate: " + DateFunctions.getStringFromZDT(_startDate) + " endDate: "
 						+ DateFunctions.getStringFromZDT(_endDate), true);
 
@@ -211,7 +211,6 @@ public class Commands {
 
 		try {
 			if (validateTrade(exchange)) {
-				// TODO must get the appropriate exchange account bean
 				sendMessage(abstractExchangeAccount.getWalletInfo(), true);
 			}
 		} catch (IOException e) {

@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.repositories;
+package com.etricky.cryptobot.model;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
-import com.etricky.cryptobot.model.TradeEntity;
+import com.etricky.cryptobot.repositories.TradesEntityRepository;
 
 import lombok.Builder;
 import lombok.Getter;

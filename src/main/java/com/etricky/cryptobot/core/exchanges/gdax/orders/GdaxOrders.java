@@ -16,6 +16,7 @@ import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.gdax.dto.trade.GDAXOrderFlags;
 import org.springframework.stereotype.Component;
 
+import com.etricky.cryptobot.core.common.NumericFunctions;
 import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeOrders;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.Commands;
@@ -59,7 +60,8 @@ public class GdaxOrders extends AbstractExchangeOrders {
 				// a limit order price has to be as close as possible of the best buy/sell in
 				// the order book
 				if (orderType == OrderType.ASK) {
-					limitPrice = orderBook.getBids().get(0).getLimitPrice().subtract(limitPriceGap);
+					limitPrice = NumericFunctions.subtract(orderBook.getBids().get(0).getLimitPrice(), limitPriceGap,
+							NumericFunctions.PRICE_SCALE);
 				} else {
 					limitPrice = orderBook.getAsks().get(0).getLimitPrice().add(limitPriceGap);
 				}

@@ -11,6 +11,7 @@ import javax.persistence.Enumerated;
 import javax.persistence.Table;
 
 import com.etricky.cryptobot.core.common.NumericFunctions;
+import com.etricky.cryptobot.model.primaryKeys.ExchangePK;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

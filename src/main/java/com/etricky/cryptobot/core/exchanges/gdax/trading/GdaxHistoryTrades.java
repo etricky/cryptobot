@@ -20,10 +20,10 @@ import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeTrading;
 import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.gdax.account.GdaxAccount;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
-import com.etricky.cryptobot.model.ExchangePK;
 import com.etricky.cryptobot.model.TradeEntity;
-import com.etricky.cryptobot.repositories.TradesData;
-import com.etricky.cryptobot.repositories.TradesData.TradeGapPeriod;
+import com.etricky.cryptobot.model.TradesData;
+import com.etricky.cryptobot.model.TradesData.TradeGapPeriod;
+import com.etricky.cryptobot.model.primaryKeys.ExchangePK;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -267,7 +267,8 @@ public class GdaxHistoryTrades {
 				log.debug("loading timeSeries with trades");
 
 				tradesEntityList = tradesData.getTradesInPeriod(gdaxTrading.getExchangeEnum().getName(),
-						gdaxTrading.getCurrencyEnum().getShortName(), startPeriod, endPeriod, false);
+						gdaxTrading.getCurrencyEnum().getShortName(), startPeriod, endPeriod,
+						exchangeJson.getAllowFakeTrades());
 
 				tradesEntityList.forEach(trade -> {
 					gdaxTrading.addTradeToTimeSeries(trade);

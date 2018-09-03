@@ -35,6 +35,7 @@ public class GdaxTrading extends AbstractExchangeTrading {
 	public GdaxTrading(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles,
 			TimeSeriesHelper timeSeriesHelper) {
 		super(exchangeThreads, commands, jsonFiles, timeSeriesHelper);
+		this.tradingBean = "gdaxTradingBean";
 	}
 
 	@PostConstruct

@@ -81,6 +81,8 @@ public class ExchangeThreads {
 			abstractExchangeOrders.initialize(exchangeEnum, threadInfo);
 
 			exchangeOrdersThreadsMap.put(exchange, abstractExchangeOrders);
+
+			// TODO start orders/account thread
 		}
 
 		// for each currencyPairs of the trade launch a thread
@@ -114,7 +116,7 @@ public class ExchangeThreads {
 		});
 
 		// for each new trade creates a new "exchangeTrade" object
-		exchangeTrade.initialize(tradeName, exchangeEnum, abstractExchangeOrders);
+		exchangeTrade.initialize(tradeName, exchangeEnum, abstractExchangeOrders, false);
 		exchangeTradeMap.put(exchangeTradeKey, exchangeTrade);
 
 		log.debug("done");
@@ -123,7 +125,7 @@ public class ExchangeThreads {
 
 	public void backtest(String exchange, String tradeName, long historyDays, ZonedDateTime startDate,
 			ZonedDateTime endDate) {
-		log.debug("start. exchange: {} tradeName: {} historyDays: {}  startDate: {} endDate: {}", exchange, tradeName,
+		log.debug("start. exchange: {} tradeName: {} historyDays: {} startDate: {} endDate: {}", exchange, tradeName,
 				historyDays, startDate, endDate);
 
 		// gets a new backtest bean
@@ -165,7 +167,8 @@ public class ExchangeThreads {
 		exchangeTradeKey = exchange + "-" + tradeName;
 	}
 
-	private String getThreadName(String exchange, String tradeName, String threadType, CurrencyEnum currencyEnum) {
+	public static String getThreadName(String exchange, String tradeName, String threadType,
+			CurrencyEnum currencyEnum) {
 		if (threadType == TRADING_THREAD) {
 			return threadType + "_" + exchange + "-" + tradeName + "-" + currencyEnum.getShortName();
 		}

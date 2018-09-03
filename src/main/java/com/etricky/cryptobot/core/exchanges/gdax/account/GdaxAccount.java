@@ -64,7 +64,7 @@ public class GdaxAccount extends AbstractExchangeAccount {
 
 	@Override
 	protected void exchangeDisconnect() {
-		// TODO Not required
+		// TODO order exchangeDisconnect
 	}
 
 }

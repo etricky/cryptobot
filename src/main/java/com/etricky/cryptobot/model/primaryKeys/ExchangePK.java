@@ -1,7 +1,6 @@
-package com.etricky.cryptobot.model;
+package com.etricky.cryptobot.model.primaryKeys;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 
 import javax.persistence.Embeddable;
 
@@ -16,7 +15,7 @@ import lombok.NonNull;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class BacktestPK implements Serializable {
+public class ExchangePK implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
@@ -26,6 +25,4 @@ public class BacktestPK implements Serializable {
 	private String currency;
 	@NonNull
 	private Long unixtime;
-	@NonNull
-	private BigDecimal index;
 }

@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.model;
+package com.etricky.cryptobot.model.primaryKeys;
 
 import java.io.Serializable;
 
@@ -15,14 +15,19 @@ import lombok.NonNull;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class ExchangePK implements Serializable {
+public class BacktestPK implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
 	@NonNull
 	private String exchange;
 	@NonNull
-	private String currency;
+	private String tradeName;
 	@NonNull
-	private Long unixtime;
+	private Long runTime;
+	@NonNull
+	private Long index;
+	@NonNull
+	@Builder.Default
+	private Boolean tradeData = false;
 }

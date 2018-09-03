@@ -12,6 +12,7 @@ import javax.persistence.Table;
 import org.ta4j.core.Order;
 
 import com.etricky.cryptobot.core.common.NumericFunctions;
+import com.etricky.cryptobot.model.primaryKeys.BacktestPK;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,9 +31,13 @@ public class BacktestEntity {
 	@NonNull
 	private BacktestPK orderId;
 	@NonNull
-	private ZonedDateTime timestamp;
+	private String currency;
 	@NonNull
-	private BigDecimal orderUnixTime;
+	private String strategy;
+	@NonNull
+	private ZonedDateTime ordertime;
+	@NonNull
+	private Long orderUnixTime;
 	@NonNull
 	@Enumerated
 	private Order.OrderType orderType;
@@ -59,6 +64,5 @@ public class BacktestEntity {
 	@NonNull
 	@Column(precision = 12, scale = NumericFunctions.FEE_SCALE)
 	private BigDecimal feeValue;
-	@NonNull
-	private String strategy;
+
 }

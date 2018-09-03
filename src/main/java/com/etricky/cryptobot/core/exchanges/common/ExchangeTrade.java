@@ -2,6 +2,7 @@ package com.etricky.cryptobot.core.exchanges.common;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,21 +53,28 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 	private TimeSeries tradeTimeSeries;
 	@Getter
 	private TradingRecord tradeTradingRecord;
-
-	private int timeSeriesBar = 0, barDuration = 0;
+	@Getter
+	private StrategyResult strategyResult;
 	@Getter
 	private String tradeName;
+
+	private int timeSeriesBar = 0, barDuration = 0;
+	private boolean backtest;
+	private BigDecimal previousBalance = BigDecimal.ZERO, previousAmount = BigDecimal.ZERO, feePercentage;
 
 	public ExchangeTrade(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles) {
 		super(exchangeThreads, commands, jsonFiles);
 	}
 
-	public void initialize(String tradeName, ExchangeEnum exchangeEnum, AbstractExchangeOrders exchangeOrders) {
-		log.debug("start. tradeName: {} exchange: {}", tradeName, exchangeEnum);
+	public void initialize(String tradeName, ExchangeEnum exchangeEnum, AbstractExchangeOrders exchangeOrders,
+			boolean backtest) {
+		log.debug("start. tradeName: {} exchange: {} backtest: {}", tradeName, exchangeEnum, backtest);
 
 		this.exchangeEnum = exchangeEnum;
 		this.exchangeOrders = exchangeOrders;
 		this.tradeName = tradeName;
+		this.backtest = backtest;
+		feePercentage = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getFee();
 
 		initializeStrategies();
 
@@ -79,6 +87,8 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 		tradeTradingRecord = new BaseTradingRecord();
 		tradeTimeSeries = new BaseTimeSeries(exchangeEnum.getName());
 		strategiesMap = new HashMap<String, AbstractStrategy>();
+		boolean multiCurrency = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getTradeConfigsMap()
+				.get(tradeName).getCurrencyPairs().size() > 1 ? true : false;
 
 		jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getTradeConfigsMap().get(tradeName).getStrategies()
 				.forEach(strategyBean -> {
@@ -92,9 +102,14 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 
 						strategiesMap.put(strategyBean, abstractStrategy);
 
-						if (strategySettings.getTimeSeriesBars().intValue() > timeSeriesBar) {
+						if (barDuration == 0 || strategySettings.getBarDurationSec().intValue() < barDuration) {
 							timeSeriesBar = strategySettings.getTimeSeriesBars().intValue();
 							barDuration = strategySettings.getBarDurationSec().intValue();
+						}
+
+						if (multiCurrency && barDuration % strategySettings.getBarDurationSec().intValue() == 0) {
+							log.error("barDuration of multicurrency trade must be compatible");
+							throw new ExchangeExceptionRT("barDuration of multicurrency trade must be compatible");
 						}
 
 						// adds each strategy to the exchange tradings
@@ -131,12 +146,21 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 	}
 
 	private void addTradeToTimeSeries(StrategyResult strategyResult) {
-		log.debug("start");
+		log.trace("start");
 
 		// adds the trade data to tradeTimeSeries
 		try {
 			if (strategyResult.getBarDuration() == barDuration) {
-				timeSeriesHelper.addTradeToTimeSeries(tradeTimeSeries, strategyResult.getTradeEntity(), barDuration);
+				if (tradeTimeSeries.isEmpty() || tradeTimeSeries.getLastBar().getEndTime()
+						.isBefore(strategyResult.getTradeEntity().getTimestamp())) {
+					timeSeriesHelper.addTradeToTimeSeries(tradeTimeSeries, strategyResult.getTradeEntity(), barDuration,
+							jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getAllowFakeTrades());
+				} else {
+					log.trace("trade {} before tradeTimeSeries end {}", strategyResult.getTradeEntity().getTimestamp(),
+							tradeTimeSeries.getLastBar().getEndTime());
+				}
+			} else {
+				log.trace("different barDuration {}/{}", barDuration, strategyResult.getBarDuration());
 			}
 		} catch (ExchangeException e1) {
 			log.error("Exception: {}", e1);
@@ -144,33 +168,52 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 			throw new ExchangeExceptionRT(e1);
 		}
 
-		log.debug("done");
+		log.trace("done");
 	}
 
-	public StrategyResult executeTrade(StrategyResult strategyResult, boolean backtest) {
-		StrategyResult auxStrategyResult;
+	/**
+	 * Based on the strategy result for a given currency, it verifies if an order
+	 * should be made. This entity keeps its own tradingRecord with all orders,
+	 * regardless of the currency. It also has its own timeSeries as it is necessary
+	 * for the tradingRecord to add a new trade.
+	 * 
+	 * If this exchangeTrade only has one currency, the strategy result will trigger
+	 * an exchange order. If there are multiple currencies, the following rules
+	 * applies:
+	 * <ul>
+	 * <li>ENTER: if no order or last order is EXIT, a BUY order is issued</li>
+	 * <li>EXIT: if last order is ENTER for the same currency, a SELL order is
+	 * issued</li>
+	 * </ul>
+	 * 
+	 * @param currencyStrategyResult The result of executing the strategies for a
+	 *                               currency
+	 * @return a StrategyResult with the orders that have been made to the exchange
+	 */
+	public StrategyResult executeTrade(StrategyResult currencyStrategyResult) {
 		int result = AbstractStrategy.NO_ACTION;
 		log.trace("start. backtest: {}", backtest);
 
-		switch (strategyResult.getResult()) {
+		switch (currencyStrategyResult.getResult()) {
 		case AbstractStrategy.ENTER:
 			if (exchangeCurrencyTradeMap.size() == 1) {
-				log.trace("single currency trade");
+				log.info("ENTER single strategy: {} currency {}", currencyStrategyResult.getStrategyName(),
+						currencyStrategyResult.getTradeEntity().getTradeId().getCurrency());
 
 				// TODO create order to buy
 
 				tradeTradingRecord.enter(tradeTimeSeries.getEndIndex(),
-						Decimal.valueOf(strategyResult.getTradeEntity().getClosePrice()), Decimal.ZERO);
+						Decimal.valueOf(currencyStrategyResult.getTradeEntity().getClosePrice()), Decimal.ZERO);
 				result = AbstractStrategy.ENTER;
 			} else {
-				log.trace("multi currency trade");
-
 				if (tradeTradingRecord.getCurrentTrade().isNew()) {
+					log.info("ENTER multi strategy: {} currency {}", currencyStrategyResult.getStrategyName(),
+							currencyStrategyResult.getTradeEntity().getTradeId().getCurrency());
 
 					// TODO create order to buy
 
 					tradeTradingRecord.enter(tradeTimeSeries.getEndIndex(),
-							Decimal.valueOf(strategyResult.getTradeEntity().getClosePrice()), Decimal.ZERO);
+							Decimal.valueOf(currencyStrategyResult.getTradeEntity().getClosePrice()), Decimal.ZERO);
 					result = AbstractStrategy.ENTER;
 				}
 			}
@@ -178,24 +221,24 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 			break;
 		case AbstractStrategy.EXIT:
 			if (exchangeCurrencyTradeMap.size() == 1) {
-				log.trace("single currency trade");
+				log.info("EXIT single strategy: {} currency {}", currencyStrategyResult.getStrategyName(),
+						currencyStrategyResult.getTradeEntity().getTradeId().getCurrency());
 
 				// TODO create order to sell
 
 				tradeTradingRecord.exit(tradeTimeSeries.getEndIndex(),
-						Decimal.valueOf(strategyResult.getTradeEntity().getClosePrice()), Decimal.ZERO);
+						Decimal.valueOf(currencyStrategyResult.getTradeEntity().getClosePrice()), Decimal.ZERO);
 				result = AbstractStrategy.EXIT;
 			} else {
-				log.trace("multi currency trade");
-
 				if (tradeTradingRecord.getCurrentTrade().isOpened()) {
+					log.info("EXIT multi strategy: {} currency {}", currencyStrategyResult.getStrategyName(),
+							currencyStrategyResult.getTradeEntity().getTradeId().getCurrency());
 
 					// TODO create order to sell
 
 					tradeTradingRecord.exit(tradeTimeSeries.getEndIndex(),
-							Decimal.valueOf(strategyResult.getTradeEntity().getClosePrice()), Decimal.ZERO);
+							Decimal.valueOf(currencyStrategyResult.getTradeEntity().getClosePrice()), Decimal.ZERO);
 					result = AbstractStrategy.EXIT;
-
 				}
 			}
 
@@ -205,26 +248,36 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 			break;
 		}
 
-		auxStrategyResult = StrategyResult.builder().result(result).beanName(EXCHANGE_TRADE).barDuration(barDuration)
-				.feePercentage(strategyResult.getFeePercentage()).tradeEntity(strategyResult.getTradeEntity())
-				.closePrice(strategyResult.getClosePrice()).timeSeriesIndex(tradeTimeSeries.getEndIndex()).build();
+		if (backtest && currencyStrategyResult.getResult() != AbstractStrategy.NO_ACTION) {
+			strategyResult = currencyStrategyResult.toBuilder().build();
+
+			strategyResult.setResult(result);
+			strategyResult.setFeePercentage(feePercentage);
+			strategyResult.setBalanceAndAmount(previousBalance, previousAmount);
+
+			previousBalance = strategyResult.getBalance();
+			previousAmount = strategyResult.getAmount();
+		} else {
+			strategyResult = currencyStrategyResult;
+		}
 
 		log.trace("done");
-		return auxStrategyResult;
+		return strategyResult;
 	}
 
 	@Override
 	public void propertyChange(PropertyChangeEvent evt) {
 		log.trace("start");
 
-		StrategyResult strategyResult = (StrategyResult) evt.getNewValue();
+		StrategyResult auxStrategyResult = (StrategyResult) evt.getNewValue();
 		log.trace("start. source: {} strategy: {} result: {}", evt.getSource().getClass().getName(),
-				strategyResult.getBeanName(), strategyResult.getResult());
+				auxStrategyResult.getStrategyName(), auxStrategyResult.getResult());
 
 		if (evt.getPropertyName().equals(AbstractExchangeTrading.PROPERTY_TRADING_RECORD)) {
-			executeTrade(strategyResult, false);
-		} else if (evt.getPropertyName().equals(AbstractExchangeTrading.PROPERTY_TRADING_RECORD)) {
-			addTradeToTimeSeries(strategyResult);
+			executeTrade(auxStrategyResult);
+		} else if (evt.getPropertyName().equals(AbstractExchangeTrading.PROPERTY_TIME_SERIES)) {
+			addTradeToTimeSeries(auxStrategyResult);
+			strategyResult = auxStrategyResult;
 		}
 
 		log.trace("done");

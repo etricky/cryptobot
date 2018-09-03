@@ -79,14 +79,14 @@ public class TraillingStopLossEntryRule extends AbstractRule {
 					result = true;
 				}
 
-				log.debug("rule :: {} >= {} && cp < {} || {} >= {} -> {}",
+				log.trace("rule :: {} >= {} && cp < {} || {} >= {} -> {}",
 						NumericFunctions.convertToBigDecimal(closePrice, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(rule10, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(sellPrice, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(deltaAmount.abs(), NumericFunctions.PERCENTAGE_SCALE),
 						NumericFunctions.convertToBigDecimal(lossPercentage1, NumericFunctions.PERCENTAGE_SCALE),
 						result);
-				log.debug("\t\tlp:{} sp: {} fee: {}",
+				log.trace("\t\tlp:{} sp: {} fee: {}",
 						NumericFunctions.convertToBigDecimal(lowPrice, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(sellPrice, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(feeValue, NumericFunctions.PRICE_SCALE));

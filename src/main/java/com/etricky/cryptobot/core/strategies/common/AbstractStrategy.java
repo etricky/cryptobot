@@ -45,11 +45,12 @@ public abstract class AbstractStrategy {
 	protected String beanName;
 	@Getter
 	protected int barDuration;
-	@Getter
-	protected BigDecimal feePercentage;
+
 	protected StrategiesJson strategiesSettings;
 	protected Strategy strategy;
+	protected BigDecimal feePercentage;
 
+	private ExchangeEnum exchangeEnum;
 	private BigDecimal highPrice = BigDecimal.ZERO, lowPrice = BigDecimal.ZERO;
 
 	public abstract void createStrategy();
@@ -58,10 +59,11 @@ public abstract class AbstractStrategy {
 		log.debug("start. exchange: {} beanName: {}", exchangeEnum.getName(), beanName);
 
 		this.beanName = beanName;
+		this.exchangeEnum = exchangeEnum;
 
-		feePercentage = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getFee();
 		strategiesSettings = jsonFiles.getStrategiesJson().get(beanName);
 		barDuration = strategiesSettings.getBarDurationSec().intValue();
+		feePercentage = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getFee();
 
 		timeSeries = new BaseTimeSeries(beanName);
 		timeSeries.setMaximumBarCount(strategiesSettings.getTimeSeriesBars().intValue());
@@ -76,7 +78,8 @@ public abstract class AbstractStrategy {
 		log.trace("start");
 
 		try {
-			result = timeSeriesHelper.addTradeToTimeSeries(timeSeries, tradeEntity, barDuration);
+			result = timeSeriesHelper.addTradeToTimeSeries(timeSeries, tradeEntity, barDuration,
+					jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getAllowFakeTrades());
 		} catch (ExchangeException e1) {
 			log.error("Exception: {}", e1);
 			log.error("trade: {}", tradeEntity);
@@ -87,47 +90,68 @@ public abstract class AbstractStrategy {
 		return result;
 	}
 
-	public StrategyResult processStrategy(TradeEntity tradeEntity, TradingRecord tradingRecord)
-			throws ExchangeException {
+	/**
+	 * For a given trade, it executes the strategy to verify if it should enter or
+	 * exit. This is done using its own timeSeries which holds the trade history,
+	 * the currencyTradingRecord that contains the recent orders for the currency
+	 * 
+	 * @param tradeEntity                The trade values reported by the exchange
+	 * @param currencyTradingRecord      Record that holds the enter/exit orders for
+	 *                                   the currency
+	 * @param currencyTimeSeriesEndIndex The last index in the timeSeries of the
+	 *                                   currency
+	 * @return the result of the execution of the strategy
+	 * @throws ExchangeException
+	 */
+	public StrategyResult processStrategy(TradeEntity tradeEntity, TradingRecord currencyTradingRecord,
+			int currencyTimeSeriesEndIndex) throws ExchangeException {
 		StrategyResult strategyResult;
 		int endIndex, result = NO_ACTION;
-		Bar lastBar = timeSeries.getLastBar();
+		Bar lastBar;
 
 		log.trace("start. timeSeries: {}", timeSeries.getName());
 
 		// adds live trade to strategy time series and executes the strategies
+		// considering the currency tradingRecord
 		if (addTradeToStrategyTimeSeries(tradeEntity)) {
 			endIndex = timeSeries.getEndIndex();
 
-			if (log.isDebugEnabled() && strategy.getName().equals(TradingStrategy.STRATEGY_NAME))
+			lastBar = timeSeries.getLastBar();
+
+			if (log.isTraceEnabled() && strategy.getName().equals(TradingStrategy.STRATEGY_NAME))
 				debug(tradeEntity);
 
-			if (tradingRecord.getCurrentTrade().isNew() && strategy.shouldEnter(endIndex, tradingRecord)) {
+			if (currencyTradingRecord.getCurrentTrade().isNew()
+					&& strategy.shouldEnter(endIndex, currencyTradingRecord)) {
 				// strategy should enter
 
 				// fills the strategy trading record that will be used by exchangeTrade
-				tradingRecord.enter(endIndex, lastBar.getClosePrice(), Decimal.ONE);
-				log.debug("strategy {} should ENTER on index: {}", strategy.getName(), timeSeries.getEndIndex());
+				currencyTradingRecord.enter(currencyTimeSeriesEndIndex, lastBar.getClosePrice(), Decimal.ONE);
+				log.debug("ENTER -> strategy {} price: {} indexes: {}/{}", strategy.getName(),
+						tradeEntity.getClosePrice(), endIndex, currencyTimeSeriesEndIndex);
 				result = ENTER;
 
-			} else if (tradingRecord.getCurrentTrade().isOpened() && strategy.shouldExit(endIndex, tradingRecord)) {
+			} else if (currencyTradingRecord.getCurrentTrade().isOpened()
+					&& strategy.shouldExit(endIndex, currencyTradingRecord)) {
 				// strategy should exit
 
-				tradingRecord.exit(endIndex, lastBar.getClosePrice(), Decimal.ONE);
-				log.debug("strategy {} should EXIT on index: {}", strategy.getName(), timeSeries.getEndIndex());
+				currencyTradingRecord.exit(currencyTimeSeriesEndIndex, lastBar.getClosePrice(), Decimal.ONE);
+				log.debug("EXIT -> strategy {} price: {} indexes s/c: {}/{}", strategy.getName(),
+						tradeEntity.getClosePrice(), endIndex, currencyTimeSeriesEndIndex);
 				result = EXIT;
 			}
-
-			setHighPrice(highPrice, result);
-			setLowPrice(lowPrice, result);
 
 		} else {
 			log.trace("no bar added");
 		}
 
-		strategyResult = StrategyResult.builder().result(result).beanName(beanName).barDuration(barDuration)
-				.feePercentage(feePercentage).tradeEntity(tradeEntity).closePrice(tradeEntity.getClosePrice())
-				.timeSeriesIndex(timeSeries.getEndIndex()).highPrice(highPrice).lowPrice(lowPrice).build();
+		strategyResult = StrategyResult.builder().result(result).strategyName(beanName).barDuration(barDuration)
+				.tradeEntity(tradeEntity).closePrice(tradeEntity.getClosePrice())
+				.timeSeriesEndIndex(currencyTimeSeriesEndIndex).highPrice(highPrice).lowPrice(lowPrice)
+				.feePercentage(feePercentage).build().tradingRecord(currencyTradingRecord);
+
+		setHighPrice(highPrice, result);
+		setLowPrice(lowPrice, result);
 
 		log.trace("done. strategyResult: {}", strategyResult);
 		return strategyResult;
@@ -153,7 +177,7 @@ public abstract class AbstractStrategy {
 		TripleEMAIndicator tema = new TripleEMAIndicator(closePrice, strategiesSettings.getTimeFrameLong().intValue());
 		DoubleEMAIndicator dema = new DoubleEMAIndicator(closePrice, strategiesSettings.getTimeFrameShort().intValue());
 
-		log.debug("index {} tema: {} dema: {} closePrice: {}/{}", timeSeries.getEndIndex(),
+		log.trace("index {} tema: {} dema: {} closePrice: {}/{}", timeSeries.getEndIndex(),
 				NumericFunctions.convertToBigDecimal(tema.getValue(endIndex), 2),
 				NumericFunctions.convertToBigDecimal(dema.getValue(endIndex), 2), tradeEntity.getClosePrice(),
 				tradeEntity.getTimestamp());

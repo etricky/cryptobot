@@ -4,6 +4,8 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.HashMap;
 
+import org.ta4j.core.BaseTimeSeries;
+import org.ta4j.core.BaseTradingRecord;
 import org.ta4j.core.TimeSeries;
 import org.ta4j.core.TradingRecord;
 
@@ -38,6 +40,7 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 	protected Disposable subscription;
 	protected StreamingExchange streamingExchange;
 	protected int tradeType;
+	protected String tradingBean;
 
 	private PropertyChangeSupport liveTradeProperty;
 	private TimeSeriesHelper timeSeriesHelper;
@@ -51,7 +54,6 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 	protected TimeSeries currencyTimeSeries;
 	@Getter
 	protected int barDuration = 0;
-
 	@Getter
 	protected CurrencyEnum currencyEnum;
 
@@ -69,6 +71,8 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 		this.exchangeEnum = exchangeEnum;
 		this.tradeType = tradeType;
 		this.threadInfo = threadInfo;
+		this.currencyTimeSeries = new BaseTimeSeries(currencyEnum.getShortName());
+		this.currencyTradingRecord = new BaseTradingRecord();
 		liveTradeProperty = new PropertyChangeSupport(this);
 		strategiesMap = new HashMap<>();
 
@@ -80,7 +84,7 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 
 		strategiesMap.putIfAbsent(strategyBean, abstractStrategy);
 
-		if (barDuration < abstractStrategy.getBarDuration()) {
+		if (barDuration == 0 || abstractStrategy.getBarDuration() < barDuration) {
 			barDuration = abstractStrategy.getBarDuration();
 		}
 
@@ -122,15 +126,23 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 	 * Methods for the trading strategies
 	 * 
 	 */
-	// used for historic trades
+
+	/**
+	 * Adds a trade to the timeSeries of the strategy, currency and notifies the
+	 * exchnangeTrades
+	 * 
+	 * @param tradeEntity The trade values reported by the exchange
+	 */
 	public void addTradeToTimeSeries(TradeEntity tradeEntity) {
+		// used for historic trades
 		log.trace("start");
 
 		strategiesMap.values().forEach(strategy -> {
 			try {
 				strategy.addTradeToStrategyTimeSeries(tradeEntity);
 
-				timeSeriesHelper.addTradeToTimeSeries(currencyTimeSeries, tradeEntity, barDuration);
+				timeSeriesHelper.addTradeToTimeSeries(currencyTimeSeries, tradeEntity, barDuration,
+						jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getAllowFakeTrades());
 
 				addTradeToCurrencyTimeSeries(tradeEntity, strategy);
 			} catch (ExchangeException e) {
@@ -142,30 +154,47 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 		log.trace("done");
 	}
 
+	/**
+	 * Adds the trade to the currency timeSeries and notifies the exchangeTrade
+	 * listener
+	 * 
+	 * @param tradeEntity The trade values reported by the exchange
+	 * @param strategy    Strategy that is being executed
+	 * @throws ExchangeException
+	 */
 	private void addTradeToCurrencyTimeSeries(TradeEntity tradeEntity, AbstractStrategy strategy)
 			throws ExchangeException {
 		if (strategy.getBarDuration() == barDuration) {
-			timeSeriesHelper.addTradeToTimeSeries(currencyTimeSeries, tradeEntity, barDuration);
+			timeSeriesHelper.addTradeToTimeSeries(currencyTimeSeries, tradeEntity, barDuration,
+					jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getAllowFakeTrades());
 
+			// notifies the exchangeTrade of the new trade
 			liveTradeProperty.firePropertyChange(PROPERTY_TIME_SERIES, null,
 					StrategyResult.builder().barDuration(barDuration).tradeEntity(tradeEntity).build());
 		}
 	}
 
-	public void processStrategiesForLiveTrade(TradeEntity tradeEntity) {
-		processStrategiesForLiveTrade(tradeEntity, false);
-	}
-
+	/**
+	 * For each strategy, adds the trade to the strategy timeSeries and then
+	 * executes the strategy. The execution uses the the strategy timeSeries and the
+	 * currency tradingRecord. It then notifies the exchnageTrade of the strategy
+	 * result and is this entity that decides if an order to the exchange should be
+	 * made.
+	 * 
+	 * @param tradeEntity The trade values reported by the exchange
+	 * @param backtest    If this method is being invoked by a backtest
+	 */
 	public StrategyResult processStrategiesForLiveTrade(TradeEntity tradeEntity, boolean backtest) {
 		lowestBar = 0;
-		strategyResult = null;
+		strategyResult = StrategyResult.builder().build();
 		log.trace("start. backtest: {}", backtest);
 
 		strategiesMap.values().forEach(strategy -> {
 			try {
 				addTradeToCurrencyTimeSeries(tradeEntity, strategy);
 
-				auxStrategyResult = strategy.processStrategy(tradeEntity, currencyTradingRecord);
+				auxStrategyResult = strategy.processStrategy(tradeEntity, currencyTradingRecord,
+						currencyTimeSeries.getEndIndex());
 			} catch (ExchangeException e) {
 				log.error("Exception: {}", e);
 				throw new ExchangeExceptionRT(e);
@@ -181,7 +210,7 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 		});
 
 		// notifies exchangeTrade of the strategy executions
-		if (!backtest && strategyResult.getResult() != AbstractStrategy.NO_ACTION) {
+		if (strategyResult.getResult() != AbstractStrategy.NO_ACTION && !backtest) {
 			liveTradeProperty.firePropertyChange(PROPERTY_TRADING_RECORD, null, strategyResult);
 		}
 
@@ -196,7 +225,7 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 	public void addListener(@NonNull PropertyChangeListener listener) {
 		log.debug("start");
 
-		liveTradeProperty.addPropertyChangeListener(currencyEnum.getShortName(), listener);
+		liveTradeProperty.addPropertyChangeListener(listener);
 
 		log.debug("done");
 	}

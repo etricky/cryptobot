@@ -6,9 +6,9 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
-import com.etricky.cryptobot.model.ExchangePK;
 import com.etricky.cryptobot.model.TradeEntity;
-import com.etricky.cryptobot.repositories.TradesData;
+import com.etricky.cryptobot.model.TradesData;
+import com.etricky.cryptobot.model.primaryKeys.ExchangePK;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -85,7 +85,7 @@ public class GdaxLiveTrades {
 		tradesData.getTradesEntityRepository().save(tradeEntity);
 
 		// executes the trading strategies for the new trade
-		gdaxTrading.processStrategiesForLiveTrade(tradeEntity);
+		gdaxTrading.processStrategiesForLiveTrade(tradeEntity, false);
 
 		log.debug("done");
 	}

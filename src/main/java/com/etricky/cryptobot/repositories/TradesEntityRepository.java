@@ -9,7 +9,7 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.etricky.cryptobot.model.TradeEntity;
-import com.etricky.cryptobot.model.ExchangePK;
+import com.etricky.cryptobot.model.primaryKeys.ExchangePK;
 
 public interface TradesEntityRepository extends CrudRepository<TradeEntity, ExchangePK> {
 

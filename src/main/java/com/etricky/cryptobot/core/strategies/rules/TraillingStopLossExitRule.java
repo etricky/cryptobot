@@ -78,12 +78,12 @@ public class TraillingStopLossExitRule extends AbstractRule {
 						result = true;
 					}
 
-					log.debug("rule :: {} <= {} AND {} <= {} -> {}",
+					log.trace("rule :: {} <= {} AND {} <= {} -> {}",
 							NumericFunctions.convertToBigDecimal(hb, NumericFunctions.PERCENTAGE_SCALE),
 							NumericFunctions.convertToBigDecimal(gainPercentage1, NumericFunctions.PERCENTAGE_SCALE),
 							NumericFunctions.convertToBigDecimal(closePrice, NumericFunctions.PRICE_SCALE),
 							NumericFunctions.convertToBigDecimal(rule10, NumericFunctions.PRICE_SCALE), result);
-					log.debug("\t\tbp: {} hp: {} hpl: {}",
+					log.trace("\t\tbp: {} hp: {} hpl: {}",
 							NumericFunctions.convertToBigDecimal(buyPrice, NumericFunctions.PRICE_SCALE),
 							NumericFunctions.convertToBigDecimal(highPrice, NumericFunctions.PRICE_SCALE),
 							NumericFunctions.convertToBigDecimal(highPriceLossValue, NumericFunctions.PRICE_SCALE));

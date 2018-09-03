@@ -16,6 +16,7 @@ public class ExchangeJson {
 	long HistoryDays;
 	BigDecimal fee;
 	Boolean sandbox;
+	Boolean allowFakeTrades;
 	ArrayList<CurrencyPair> currencyPairs;
 	ArrayList<OrderMinimums> orderMinimums;
 	ArrayList<TradeConfigs> tradeConfigs;
