@@ -6,6 +6,7 @@ import com.etricky.cryptobot.core.common.threads.ThreadInfo;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.Commands;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 
 import lombok.Getter;
@@ -21,6 +22,8 @@ public abstract class AbstractExchange implements UncaughtExceptionHandler {
 	protected JsonFiles jsonFiles;
 	@Getter
 	protected ExchangeEnum exchangeEnum;
+	@Getter
+	protected boolean dryRunTrade = false, historyOnlyTrade = false, fullTrade = false, backtestTrade = false;
 
 	public AbstractExchange(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles) {
 		this.exchangeThreads = exchangeThreads;
@@ -28,7 +31,25 @@ public abstract class AbstractExchange implements UncaughtExceptionHandler {
 		this.jsonFiles = jsonFiles;
 	}
 
-	protected abstract void exchangeDisconnect();
+	public ExchangeJson getExchangeJson() {
+		return jsonFiles.getExchangesJsonMap().get(exchangeEnum.getName());
+	}
+
+	protected void exchangeDisconnect() {
+		log.debug("start");
+
+		try {
+			exchangeThreads.stopExchangeThreads(exchangeEnum.getName());
+
+			commands.sendMessage("Stopped orders for exchange: " + exchangeEnum.getTradingBean(), true);
+
+		} catch (Exception e) {
+			log.error("Exception: {}", e);
+			commands.exceptionHandler(e);
+		}
+
+		log.debug("done");
+	}
 
 	protected void setThreadInfoData() {
 		log.debug("start");
@@ -44,7 +65,8 @@ public abstract class AbstractExchange implements UncaughtExceptionHandler {
 		log.error("start. exception on thread:{}", t.getName());
 		log.error("exception: {}", e);
 
-		commands.sendMessage("Exception occurred on " + t.getName() + ". Stopping thread", true);
+		commands.sendMessage("Exception " + e.getMessage() + " occurred on " + t.getName() + ". Stopping thread", true);
+
 		// sends the interrupt to itself
 		if (t.isAlive() || !t.isInterrupted()) {
 			log.debug("sending interrupt");

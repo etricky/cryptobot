@@ -7,8 +7,8 @@ import java.util.Map;
 import org.ta4j.core.Order.OrderType;
 
 import com.etricky.cryptobot.core.common.NumericFunctions;
-import com.etricky.cryptobot.core.strategies.TradingStrategy;
-import com.etricky.cryptobot.core.strategies.TrailingStopLossStrategy;
+import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
+import com.etricky.cryptobot.core.strategies.common.AbstractStrategy;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -35,12 +35,10 @@ public class BacktestMetaData {
 
 	private String currencyOrders = "orders ::";
 
-	public void calculateMetaData(BacktestOrderInfo orderInfo) {
+	public void calculateMetaData(BacktestOrderInfo orderInfo, JsonFiles jsonFiles) {
 		String strategyBeanName,
 				currencyName = orderInfo.getStrategyResult().getTradeEntity().getTradeId().getCurrency();
 		OrderType orderType;
-
-		orderInfo.getStrategyResult().setBalanceAndAmount(previousOrderBalance, previousOrderAmount);
 
 		if (firstOrderAmount == BigDecimal.ZERO) {
 			firstOrderPrice = orderInfo.getStrategyResult().getClosePrice();
@@ -73,17 +71,21 @@ public class BacktestMetaData {
 		}
 
 		if (orderType.equals(OrderType.BUY)) {
-			if (strategyBeanName.equals(TradingStrategy.STRATEGY_NAME)) {
+			if (jsonFiles.getStrategiesJsonMap().get(strategyBeanName).getType()
+					.equalsIgnoreCase(AbstractStrategy.STRATEGY_TYPE_TRADING)) {
 				tradingBuys++;
-			} else if (strategyBeanName.equals(TrailingStopLossStrategy.STRATEGY_NAME)) {
+			} else if (jsonFiles.getStrategiesJsonMap().get(strategyBeanName).getType()
+					.equalsIgnoreCase(AbstractStrategy.STRATEGY_TYPE_STOP_LOSS)) {
 				stopLossBuys++;
 			}
 
 			currencyOrdersMap.get(currencyName)[BUY]++;
 		} else if (orderType.equals(OrderType.SELL)) {
-			if (strategyBeanName.equals(TradingStrategy.STRATEGY_NAME)) {
+			if (jsonFiles.getStrategiesJsonMap().get(strategyBeanName).getType()
+					.equalsIgnoreCase(AbstractStrategy.STRATEGY_TYPE_TRADING)) {
 				tradingSells++;
-			} else if (strategyBeanName.equals(TrailingStopLossStrategy.STRATEGY_NAME)) {
+			} else if (jsonFiles.getStrategiesJsonMap().get(strategyBeanName).getType()
+					.equalsIgnoreCase(AbstractStrategy.STRATEGY_TYPE_STOP_LOSS)) {
 				stopLossSells++;
 			}
 
@@ -95,8 +97,7 @@ public class BacktestMetaData {
 
 	public String getCurrencyOrders() {
 		currencyOrdersMap.forEach((currName, array) -> {
-			currencyOrders = currencyOrders + " currency " + currName + " buys: " + array[BUY] + " sells: "
-					+ array[SELL];
+			currencyOrders = currencyOrders + " " + currName + " B/S: " + array[BUY] + "/" + array[SELL];
 		});
 		return currencyOrders;
 	}
@@ -105,9 +106,8 @@ public class BacktestMetaData {
 		log.info("totalOrders: {}, posBalance: {}, negBalance: {}, posAmount: {}, negAmount: {} fees: {}", totalOrders,
 				posBalanceOrders, negBalanceOrders, posAmountOrders, negAmountOrders,
 				totalFees.setScale(NumericFunctions.FEE_SCALE));
-		log.info("strategy: {}, buys: {} sells: {}", TradingStrategy.STRATEGY_NAME, tradingBuys, tradingSells);
-		log.info("strategy: {}, buys: {} sells: {}", TrailingStopLossStrategy.STRATEGY_NAME, stopLossBuys,
-				stopLossSells);
+		log.info("strategy: {} B/S: {}/{}", AbstractStrategy.STRATEGY_TYPE_TRADING, tradingBuys, tradingSells);
+		log.info("strategy: {} B/S: {}/{}", AbstractStrategy.STRATEGY_TYPE_STOP_LOSS, stopLossBuys, stopLossSells);
 		log.info(currencyOrders);
 	}
 }

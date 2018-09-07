@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.model.primaryKeys;
+package com.etricky.cryptobot.model.pks;
 
 import java.io.Serializable;
 

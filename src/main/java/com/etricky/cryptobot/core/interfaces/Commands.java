@@ -1,6 +1,5 @@
 package com.etricky.cryptobot.core.interfaces;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
@@ -20,6 +19,7 @@ import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeAccount;
 import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeTrading;
 import com.etricky.cryptobot.core.exchanges.common.enums.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
+import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
@@ -51,15 +51,18 @@ public class Commands {
 	private boolean validCommand;
 
 	public void startExchangeTrade(String exchange, String tradeName, int tradeType) {
-		log.debug("start. exchange: {} tradeName: {} tradeType: {}", exchange, tradeName, tradeType);
+		String _exchange = exchange.toUpperCase(), _tradeName = tradeName.toUpperCase();
+		log.debug("start. exchange: {} tradeName: {} tradeType: {}", _exchange, tradeName, tradeType);
 
 		try {
-			if (validateTrade(exchange, Optional.of(tradeName))) {
-				sendMessage("Starting trade for exchange: " + exchange + " tradeName: " + tradeName, true);
-				if (tradeType < AbstractExchangeTrading.TRADE_ALL || tradeType > AbstractExchangeTrading.TRADE_LIVE) {
+			reloadConfigs();
+			if (validateTrade(_exchange, Optional.of(_tradeName))) {
+				sendMessage("Starting trade for exchange: " + _exchange + " tradeName: " + _tradeName, true);
+				if (tradeType < AbstractExchangeTrading.TRADE_FULL
+						|| tradeType > AbstractExchangeTrading.TRADE_DRY_RUN) {
 					sendMessage("Trade type must be 0 - All, 1 - History or 2 - Live", true);
 				} else {
-					int result = exchangeThreads.startExchangeTradingThread(exchange, tradeName, tradeType);
+					int result = exchangeThreads.startExchangeTradingThread(_exchange, _tradeName, tradeType);
 					if (result == ExchangeThreads.TRADE_THREAD_EXISTS) {
 						sendMessage("Thread already exist", true);
 					}
@@ -73,53 +76,76 @@ public class Commands {
 		log.debug("done");
 	}
 
-	public void backtest(String exchange, String tradeName, int historyDays, String startDate, String endDate) {
+	private void executeBacktest(String exchange, String tradeName, int historyDays, String startDate, String endDate)
+			throws ExchangeException {
 		ZonedDateTime _startDate = null, _endDate = null;
+		validCommand = validateTrade(exchange, Optional.of(tradeName));
 
-		log.debug("start. exchange: {} tradeName: {} historyDays: {} startDate: {} endDate: {}", exchange, tradeName,
+		if (validCommand && historyDays < 0) {
+			sendMessage("history days must be positive", true);
+			validCommand = false;
+		}
+
+		if (validCommand && historyDays == 0) {
+			try {
+				_startDate = DateFunctions.getZDTfromStringDate(startDate);
+			} catch (ParseException e) {
+				sendMessage("Start date must be on format yyyy-mm-dd", true);
+				validCommand = false;
+			}
+
+			try {
+				_endDate = DateFunctions.getZDTfromStringDate(endDate);
+			} catch (ParseException e) {
+				sendMessage("End date must be on format yyyy-mm-dd", true);
+				validCommand = false;
+			}
+
+			if (_startDate.isAfter(_endDate) || _startDate.isEqual(_endDate)) {
+				sendMessage("Start date must be befor end date", true);
+				validCommand = false;
+			}
+		}
+
+		if (validCommand) {
+			sendMessage("Starting backtest for exchange: " + exchange + " trade: " + tradeName + " historyDays: "
+					+ historyDays + " startDate: " + DateFunctions.getStringFromZDT(_startDate) + " endDate: "
+					+ DateFunctions.getStringFromZDT(_endDate), true);
+
+			// ensures that the backtest has the latest configs
+			reloadConfigs();
+
+			exchangeThreads.backtest(exchange, tradeName, historyDays, _startDate, _endDate);
+		}
+	}
+
+	public void backtest(String exchange, String tradeName, int historyDays, String startDate, String endDate) {
+		String _exchange = exchange.toUpperCase(), _tradeName = tradeName.toUpperCase();
+
+		log.debug("start. exchange: {} tradeName: {} historyDays: {} startDate: {} endDate: {}", _exchange, tradeName,
 				historyDays, startDate, endDate);
 
 		validCommand = true;
 
 		try {
-			validCommand = validateTrade(exchange, Optional.of(tradeName));
+			reloadConfigs();
 
-			if (validCommand && historyDays < 0) {
-				sendMessage("history days must be positive", true);
-				validCommand = false;
-			}
-
-			if (validCommand && historyDays == 0) {
-				try {
-					_startDate = DateFunctions.getZDTfromStringDate(startDate);
-				} catch (ParseException e) {
-					sendMessage("Start date must be on format yyyy-mm-dd", true);
-					validCommand = false;
+			if (_tradeName.equalsIgnoreCase("ALL")) {
+				validCommand = validateTrade(exchange, Optional.empty());
+				if (validCommand) {
+					jsonFiles.getExchangesJsonMap().get(_exchange).getTradeConfigsMap().keySet().forEach(trade -> {
+						try {
+							executeBacktest(_exchange, trade, historyDays, startDate, endDate);
+						} catch (ExchangeException e) {
+							exceptionHandler(e);
+						}
+					});
 				}
 
-				try {
-					_endDate = DateFunctions.getZDTfromStringDate(endDate);
-				} catch (ParseException e) {
-					sendMessage("End date must be on format yyyy-mm-dd", true);
-					validCommand = false;
-				}
-
-				if (_startDate.isAfter(_endDate) || _startDate.isEqual(_endDate)) {
-					sendMessage("Start date must be befor end date", true);
-					validCommand = false;
-				}
+			} else {
+				executeBacktest(_exchange, _tradeName, historyDays, startDate, endDate);
 			}
 
-			if (validCommand) {
-				sendMessage("Starting backtest for exchange: " + exchange + " trade: " + tradeName + " historyDays: "
-						+ historyDays + " startDate: " + DateFunctions.getStringFromZDT(_startDate) + " endDate: "
-						+ DateFunctions.getStringFromZDT(_endDate), true);
-
-				// ensures that the backtest has the latest configs
-				reloadConfigs();
-
-				exchangeThreads.backtest(exchange, tradeName, historyDays, _startDate, _endDate);
-			}
 		} catch (Exception e) {
 			exceptionHandler(e);
 		}
@@ -129,16 +155,16 @@ public class Commands {
 	}
 
 	public void stopExchangeTrade(String exchange, String tradeName) {
-
-		log.debug("start. exchange: {} tradeName: {}", exchange, tradeName);
+		String _exchange = exchange.toUpperCase(), _tradeName = tradeName.toUpperCase();
+		log.debug("start. exchange: {} tradeName: {}", _exchange, _tradeName);
 
 		try {
-			sendMessage("Stopping trade for exchange: " + exchange + " tradeName: " + tradeName, true);
+			sendMessage("Stopping trade for exchange: " + _exchange + " tradeName: " + _tradeName, true);
 
-			if (validateTrade(exchange, Optional.of(tradeName))) {
-				int result = exchangeThreads.stopTradeThreads(exchange, tradeName);
+			if (validateTrade(_exchange, Optional.of(_tradeName))) {
+				int result = exchangeThreads.stopTradeThreads(_exchange, _tradeName);
 				if (result == ExchangeThreads.TRADE_THREAD_NOT_EXISTS) {
-					sendMessage("no trade " + exchangeThreads.getExchangeTradeKey(exchange, tradeName) + " found",
+					sendMessage("no trade " + exchangeThreads.getExchangeTradeKey(_exchange, _tradeName) + " found",
 							true);
 				}
 			} else
@@ -160,9 +186,9 @@ public class Commands {
 			} else {
 				auxString = "Current exchange trading threads:\n";
 				auxList.keySet().forEach((exch) -> {
-					auxString.concat(exch + "\n");
+					auxString = auxString.concat(exch + "\n");
 					auxList.get(exch).forEach((curr) -> {
-						auxString.concat(" - " + curr + "\n");
+						auxString = auxString.concat(" - " + curr + "\n");
 					});
 				});
 				sendMessage(auxString, toExternalApp);
@@ -196,7 +222,7 @@ public class Commands {
 		log.debug("start");
 
 		try {
-			jsonFiles.loadFiles();
+			jsonFiles.initialize();
 		} catch (Exception e) {
 			exceptionHandler(e);
 		}
@@ -205,16 +231,13 @@ public class Commands {
 	}
 
 	public void printWalletInfo(String exchange) {
-		log.debug("start. exchange: {}", exchange);
+		String _exchange = exchange.toUpperCase();
+		log.debug("start. exchange: {}", _exchange);
 
-		try {
-			if (validateTrade(exchange)) {
-				AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
-						.getBean(exchange);
-				sendMessage(abstractExchangeAccount.getWalletInfo(), true);
-			}
-		} catch (IOException e) {
-			exceptionHandler(e);
+		if (validateTrade(_exchange)) {
+			AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
+					.getBean(ExchangeEnum.getInstanceByName(_exchange).get().getAccountBean());
+			sendMessage(abstractExchangeAccount.getWalletInfo(), true);
 		}
 
 		log.debug("done");
@@ -232,7 +255,7 @@ public class Commands {
 
 		validCommand = true;
 
-		Map<String, ExchangeJson> exchangeJsonMap = jsonFiles.getExchangesJson();
+		Map<String, ExchangeJson> exchangeJsonMap = jsonFiles.getExchangesJsonMap();
 
 		if (ExchangeEnum.getInstanceByName(_exchange) == null) {
 			sendMessage("Not a valid exchange", true);
@@ -278,7 +301,7 @@ public class Commands {
 					sendMessage("Trade config not yet configured", true);
 					sendMessage("Valid trade configs:");
 					exchangeJson.getTradeConfigs().forEach((t) -> {
-						sendMessage(" - " + t);
+						sendMessage(" - " + t.getTradeName());
 					});
 					validCommand = false;
 				}

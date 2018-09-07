@@ -1,34 +1,28 @@
 package com.etricky.cryptobot.core.strategies.backtest;
 
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.TreeMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-import org.ta4j.core.AnalysisCriterion;
-import org.ta4j.core.analysis.criteria.BuyAndHoldCriterion;
-import org.ta4j.core.analysis.criteria.TotalProfitCriterion;
-import org.ta4j.core.analysis.criteria.VersusBuyAndHoldCriterion;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.common.NumericFunctions;
 import com.etricky.cryptobot.core.common.threads.ThreadInfo;
-import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeOrders;
+import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeAccount;
 import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeTrading;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeTrade;
 import com.etricky.cryptobot.core.exchanges.common.enums.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
+import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeExceptionRT;
-import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.Commands;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 import com.etricky.cryptobot.core.strategies.StrategyResult;
@@ -37,7 +31,7 @@ import com.etricky.cryptobot.model.BacktestEntity;
 import com.etricky.cryptobot.model.BacktestResultsEntity;
 import com.etricky.cryptobot.model.TradeEntity;
 import com.etricky.cryptobot.model.TradesData;
-import com.etricky.cryptobot.model.primaryKeys.BacktestPK;
+import com.etricky.cryptobot.model.pks.BacktestPK;
 import com.etricky.cryptobot.repositories.BacktestRepository;
 import com.etricky.cryptobot.repositories.BacktestResultsRepository;
 
@@ -49,15 +43,15 @@ import lombok.extern.slf4j.Slf4j;
 public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 
 	@Autowired
-	protected JsonFiles jsonFiles;
+	private JsonFiles jsonFiles;
 	@Autowired
 	private TradesData tradesData;
 	@Autowired
 	private Commands commands;
 	@Autowired
-	BacktestRepository backtestRepository;
+	private BacktestRepository backtestRepository;
 	@Autowired
-	BacktestResultsRepository backtestResultsRepository;
+	private BacktestResultsRepository backtestResultsRepository;
 	@Autowired
 	private ApplicationContext appContext;
 
@@ -65,25 +59,23 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 	private Map<String, BacktestResultsEntity> backtestResultsMap = new HashMap<>();
 	private Map<String, BacktestMetaData> backtestResultsMetaDataMap = new HashMap<>();
 	private List<String> tradeCurrencies;
-	private List<TradeEntity> dbTradesEntityList = new ArrayList<TradeEntity>();
+	private List<TradeEntity> dbTradeEntityList = new ArrayList<TradeEntity>();
+	private Map<Long, List<TradeEntity>> dbTradeEntityMap = new TreeMap<>();
 
 	private List<BacktestOrderInfo> currencyOrderInfoList = new ArrayList<>();
 	private Map<String, List<BacktestOrderInfo>> backtestCurrencyOrderInfoMap = new TreeMap<>();
 
 	private List<BacktestOrderInfo> tradeOrderInfoList = new ArrayList<>();
 
-	private Map<ZonedDateTime, BacktestOrderInfo> timeBasedCurrencyOrderInfoMap = new TreeMap<>();
-
 	private ExchangeEnum exchangeEnum;
 	private ExchangeTrade exchangeTrade;
 	private BacktestMetaData backtestMetaData;
-	private AnalysisCriterion criterion;
 
 	private String tradeName, currencyName;
 	private final String TRADE_KEY = "trade_key";
 	private long startDateUnixTime, endDateUnixTime, backtestStart;
-	private Double criterionValue;
 	private long counter, backtestResultsIndex = 0;
+	private ZonedDateTime startDate, endDate;
 
 	public void initialize(ExchangeEnum exchangeEnum, String tradeName, long historyDays, ZonedDateTime startDate,
 			ZonedDateTime endDate) {
@@ -97,7 +89,8 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 
 		if (startDate == null) {
 			if (historyDays == 0) {
-				auxHistoryDays = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getHistoryDays() * 86400;
+				auxHistoryDays = jsonFiles.getExchangesJsonMap().get(exchangeEnum.getName()).getTradeHistoryDays()
+						* 86400;
 			} else {
 				auxHistoryDays = historyDays * 86400;
 			}
@@ -108,6 +101,9 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 			endDateUnixTime = DateFunctions.getUnixTimeFromZDT(endDate);
 		}
 
+		this.startDate = DateFunctions.getZDTfromUnixTime(startDateUnixTime);
+		this.endDate = DateFunctions.getZDTfromUnixTime(endDateUnixTime);
+
 		log.debug("done");
 	}
 
@@ -116,18 +112,17 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 
 		exchangeTrade = (ExchangeTrade) appContext.getBean("exchangeTrade");
 
-		AbstractExchangeOrders abstractExchangeOrders = (AbstractExchangeOrders) appContext
-				.getBean(exchangeEnum.getOrdersBean());
+		AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
+				.getBean(exchangeEnum.getAccountBean());
 
-		ThreadInfo threadInfo = new ThreadInfo(
-				ExchangeThreads.getThreadName(exchangeEnum.getName(), tradeName, ExchangeThreads.ORDERS_THREAD, null));
-		abstractExchangeOrders.initialize(exchangeEnum, threadInfo);
+		abstractExchangeAccount.initialize(exchangeEnum, new ThreadInfo("backtest"));
 
-		// TODO start orders/account thread
+		exchangeTrade.initialize(tradeName, exchangeEnum, abstractExchangeAccount,
+				AbstractExchangeTrading.TRADE_BACKTEST);
 
 		// for each currencyPairs of the trade launch a trading bean
-		tradeCurrencies = jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getTradeConfigsMap().get(tradeName)
-				.getCurrencyPairs();
+		tradeCurrencies = jsonFiles.getExchangesJsonMap().get(exchangeEnum.getName()).getTradeConfigsMap()
+				.get(tradeName).getCurrencyPairs();
 
 		tradeCurrencies.forEach(currencyPair -> {
 			CurrencyEnum currencyEnum = CurrencyEnum.getInstanceByShortName(currencyPair).get();
@@ -136,15 +131,17 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 			AbstractExchangeTrading abstractExchangeTrading = (AbstractExchangeTrading) appContext
 					.getBean(exchangeEnum.getTradingBean());
 
-			abstractExchangeTrading.initialize(exchangeEnum, currencyEnum, AbstractExchangeTrading.TRADE_LIVE,
-					new ThreadInfo("backtest"));
+			abstractExchangeTrading.initialize(exchangeEnum, currencyEnum, new ThreadInfo("backtest"));
 
 			log.debug("create exchange trading bean for currencyPair: {}", currencyPair);
 
-			exchangeTrade.addExchangeTrading(currencyEnum, abstractExchangeTrading);
+			try {
+				exchangeTrade.addExchangeTrading(currencyEnum, abstractExchangeTrading);
+			} catch (ExchangeException e) {
+				log.error("Exception: {}", e);
+				throw new ExchangeExceptionRT(e);
+			}
 		});
-
-		exchangeTrade.initialize(tradeName, exchangeEnum, abstractExchangeOrders, true);
 
 		log.debug("done");
 	}
@@ -152,73 +149,68 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 	private void executeStrategies() {
 		log.debug("start");
 
-		// for each currency executes the strategies
-		exchangeTrade.getExchangeCurrencyTradeMap().values().forEach(abstractTrading -> {
-			CurrencyEnum currencyEnum = abstractTrading.getCurrencyEnum();
-			String currencyName = currencyEnum.getShortName();
+		// for each currency create an ordered map with the trades
+		exchangeTrade.getExchangeTradeCurrencyMap().values().forEach(tradeCurrency -> {
+
+			String currencyName = tradeCurrency.getCurrencyName();
 
 			// load trades from BD for the currency
-			dbTradesEntityList = tradesData.getTradesInPeriod(exchangeEnum.getName(), currencyName, startDateUnixTime,
-					endDateUnixTime, jsonFiles.getExchangesJson().get(exchangeEnum.getName()).getAllowFakeTrades());
+			dbTradeEntityList = tradesData.getTradesInPeriod(exchangeEnum.getName(), currencyName, startDateUnixTime,
+					endDateUnixTime, jsonFiles.getExchangesJsonMap().get(exchangeEnum.getName()).getAllowFakeTrades());
 
-			if (dbTradesEntityList.size() != 0) {
-				log.trace("for currency: {} got {} trades from database", currencyName, dbTradesEntityList.size());
+			if (dbTradeEntityList.size() != 0) {
+				log.debug("for currency {} got {} trades from database", currencyName, dbTradeEntityList.size());
 
-				// for each trade gets and stores the orders for each currency and for trade
-				dbTradesEntityList.forEach(trade -> {
+				dbTradeEntityList.forEach(trade -> {
 
-					StrategyResult strategyResult = abstractTrading.processStrategiesForLiveTrade(trade, true);
-
-					if (strategyResult.getResult() != AbstractStrategy.NO_ACTION) {
-
-						log.trace("adding new currency order. result: {}", strategyResult.getResult());
-
-						BacktestOrderInfo backtestOrderInfo = new BacktestOrderInfo(strategyResult);
-
-						// this timeSeries index belongs to the currency
-						currencyOrderInfoList.add(backtestOrderInfo);
-
-						ZonedDateTime key = strategyResult.getTradeEntity().getTimestamp();
-
-						// for the multicurrency scenario, there may be several orders being created for
-						// the same time so the key must have an offset of a second so it can be stored.
-						// The offset is calculated in a random manner to avoid that the order by which
-						// the currencies are processed is the same every time
-						while (timeBasedCurrencyOrderInfoMap.containsKey(key)) {
-							if (new Random().nextInt(11) > 5) {
-								key = key.plusSeconds(1);
-							} else {
-								key = key.minusSeconds(1);
-							}
-						}
-
-						timeBasedCurrencyOrderInfoMap.put(key, backtestOrderInfo);
+					// list of trades sorted by time
+					if (dbTradeEntityMap.containsKey(trade.getTradeId().getUnixtime())) {
+						dbTradeEntityMap.get(trade.getTradeId().getUnixtime()).add(trade);
+					} else {
+						List<TradeEntity> auxTradeList = new ArrayList<>();
+						auxTradeList.add(trade);
+						dbTradeEntityMap.put(trade.getTradeId().getUnixtime(), auxTradeList);
 					}
+
 				});
 
 			} else {
 				log.error("no trades in database for currency: {}", currencyName);
 				throw new ExchangeExceptionRT("Missing db trades for currency: " + currencyName);
 			}
-
-			// for each currency, stores the orders
-			backtestCurrencyOrderInfoMap.put(currencyName, currencyOrderInfoList);
-			currencyOrderInfoList = new ArrayList<>();
 		});
 
-		log.debug("done with currencies, executing trade");
+		log.debug("processing trades for all currencies");
 
-		// for each currency order result, calls the exchangeTrade for its result
-		timeBasedCurrencyOrderInfoMap.keySet().forEach(zdt -> {
+		dbTradeEntityMap.values().forEach(tradeList -> {
+			tradeList.forEach(trade -> {
+				StrategyResult[] strategyResult = exchangeTrade.evaluateTrade(trade);
 
-			StrategyResult strategyResult = exchangeTrade
-					.executeTrade(timeBasedCurrencyOrderInfoMap.get(zdt).getStrategyResult());
+				if (strategyResult[ExchangeTrade.TRADE] != null
+						&& strategyResult[ExchangeTrade.TRADE].getResult() != AbstractStrategy.NO_ACTION) {
+					log.trace("adding new trade order. result: {}", strategyResult[ExchangeTrade.TRADE].getResult());
 
-			if (strategyResult.getResult() != AbstractStrategy.NO_ACTION) {
-				log.trace("adding new trade order. result: {}", strategyResult.getResult());
+					tradeOrderInfoList.add(new BacktestOrderInfo(strategyResult[ExchangeTrade.TRADE]));
+				}
 
-				tradeOrderInfoList.add(new BacktestOrderInfo(strategyResult));
-			}
+				// for each currency, stores the orders
+				if (strategyResult[ExchangeTrade.CURRENCY] != null
+						&& strategyResult[ExchangeTrade.CURRENCY].getResult() != AbstractStrategy.NO_ACTION) {
+
+					log.trace("adding new currency order. result: {}",
+							strategyResult[ExchangeTrade.CURRENCY].getResult());
+
+					BacktestOrderInfo backtestOrderInfo = new BacktestOrderInfo(strategyResult[ExchangeTrade.CURRENCY]);
+
+					if (backtestCurrencyOrderInfoMap.containsKey(trade.getTradeId().getCurrency())) {
+						backtestCurrencyOrderInfoMap.get(trade.getTradeId().getCurrency()).add(backtestOrderInfo);
+					} else {
+						currencyOrderInfoList = new ArrayList<>();
+						currencyOrderInfoList.add(backtestOrderInfo);
+						backtestCurrencyOrderInfoMap.put(trade.getTradeId().getCurrency(), currencyOrderInfoList);
+					}
+				}
+			});
 		});
 
 		log.debug("done");
@@ -230,14 +222,18 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 				.runTime(backtestStart).index(backtestResultsIndex++).tradeData(key.equals(TRADE_KEY) ? true : false)
 				.build();
 
-		backtestResultsMap.put(key, BacktestResultsEntity.builder().backtestId(backtestPK)
-				.currency(orderInfo.getStrategyResult().getTradeEntity().getTradeId().getCurrency())
+		backtestResultsMap.put(key, BacktestResultsEntity.builder().backtestId(backtestPK).tradeStart(startDate)
+				.tradeEnd(endDate).currency(orderInfo.getStrategyResult().getTradeEntity().getTradeId().getCurrency())
 				.initialBalance(backtestMetaData.getFirstOrderBalance())
 				.initialAmount(backtestMetaData.getFirstOrderAmount())
 				.initialPrice(backtestMetaData.getFirstOrderPrice())
 				.finalBalance(orderInfo.getStrategyResult().getBalance())
 				.finalAmount(orderInfo.getStrategyResult().getAmount())
 				.finalPrice(orderInfo.getStrategyResult().getClosePrice())
+				.deltaBalance(NumericFunctions.percentage(orderInfo.getStrategyResult().getBalance(),
+						backtestMetaData.getFirstOrderBalance(), false))
+				.deltaAmount(NumericFunctions.percentage(orderInfo.getStrategyResult().getAmount(),
+						backtestMetaData.getFirstOrderAmount(), false))
 				.posBalanceOrders(backtestMetaData.getPosBalanceOrders())
 				.negBalanceOrders(backtestMetaData.getNegBalanceOrders())
 				.posAmountOrders(backtestMetaData.getPosAmountOrders())
@@ -264,7 +260,7 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 					currencyName = currName;
 				}
 
-				backtestMetaData.calculateMetaData(orderInfo);
+				backtestMetaData.calculateMetaData(orderInfo, jsonFiles);
 
 				// stores the backtest data for each currency in the database
 				BacktestPK backtestPK = BacktestPK.builder().exchange(exchangeEnum.getName()).tradeName(tradeName)
@@ -291,7 +287,11 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 			});
 
 			// stores the last order info for the currency
-			storeBacktestResult(orderInfoList.get(orderInfoList.size() - 1), backtestMetaData, currName);
+			if (orderInfoList.size() > 0) {
+				storeBacktestResult(orderInfoList.get(orderInfoList.size() - 1), backtestMetaData, currName);
+			} else {
+				log.debug("no currency trade!!!");
+			}
 		});
 
 		log.info("-----------");
@@ -303,7 +303,7 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 
 		tradeOrderInfoList.forEach(orderInfo -> {
 
-			backtestMetaData.calculateMetaData(orderInfo);
+			backtestMetaData.calculateMetaData(orderInfo, jsonFiles);
 
 			// stores the backtest data in the database
 			BacktestPK backtestPK = BacktestPK.builder().exchange(exchangeEnum.getName()).tradeName(tradeName)
@@ -330,7 +330,11 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 		});
 
 		// stores the last order info for the trade
-		storeBacktestResult(tradeOrderInfoList.get(tradeOrderInfoList.size() - 1), backtestMetaData, TRADE_KEY);
+		if (tradeOrderInfoList.size() > 0) {
+			storeBacktestResult(tradeOrderInfoList.get(tradeOrderInfoList.size() - 1), backtestMetaData, TRADE_KEY);
+		} else {
+			log.debug("no currency trade!!!");
+		}
 
 		backtestRepository.saveAll(backtestEntityList);
 
@@ -340,62 +344,43 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 	private void evaluation() {
 		log.debug("start");
 
-		exchangeTrade.getExchangeCurrencyTradeMap().forEach((currName, abstractTrading) -> {
+		exchangeTrade.getExchangeTradeCurrencyMap().forEach((currName, abstractTrading) -> {
 			log.info("-----------");
 			log.info("CURRENCY PROFIT: {}", currName);
 			log.info("-----------");
-			log.info("balance: {}/{} amount: {}/{}", backtestResultsMap.get(currName).getFinalBalance(),
-					backtestResultsMap.get(currName).getInitialBalance(),
-					backtestResultsMap.get(currName).getFinalAmount(),
-					backtestResultsMap.get(currName).getInitialAmount());
+			if (!backtestResultsMap.isEmpty()) {
+				log.info("balance: {}/{}/{}% amount: {}/{}/{}%", backtestResultsMap.get(currName).getFinalBalance(),
+						backtestResultsMap.get(currName).getInitialBalance(),
+						NumericFunctions.percentage(backtestResultsMap.get(currName).getFinalBalance(),
+								backtestResultsMap.get(currName).getInitialBalance(), false),
+						backtestResultsMap.get(currName).getFinalAmount(),
+						backtestResultsMap.get(currName).getInitialAmount(),
+						NumericFunctions.percentage(backtestResultsMap.get(currName).getFinalAmount(),
+								backtestResultsMap.get(currName).getInitialAmount(), false));
 
-			backtestResultsMetaDataMap.get(currName).printMetaData();
-
-			// set and run analysis criteria
-			criterion = new TotalProfitCriterion();
-			criterionValue = criterion.calculate(abstractTrading.getCurrencyTimeSeries(),
-					abstractTrading.getCurrencyTradingRecord());
-			log.info("criteria: TotalProfitCriterion value: {}", criterionValue);
-			backtestResultsMap.get(currName).setTotalProfit(BigDecimal.valueOf(criterionValue));
-
-			criterion = new BuyAndHoldCriterion();
-			criterionValue = criterion.calculate(abstractTrading.getCurrencyTimeSeries(),
-					abstractTrading.getCurrencyTradingRecord());
-			log.info("criteria: BuyAndHoldCriterion value: {}", criterionValue);
-			backtestResultsMap.get(currName).setBuyAndHold(BigDecimal.valueOf(criterionValue));
-
-			criterion = new VersusBuyAndHoldCriterion(new TotalProfitCriterion());
-			criterionValue = criterion.calculate(abstractTrading.getCurrencyTimeSeries(),
-					abstractTrading.getCurrencyTradingRecord());
-			log.info("criteria: VersusBuyAndHoldCriterion value: {}", criterionValue);
-			backtestResultsMap.get(currName).setVersusBuyAndHold(BigDecimal.valueOf(criterionValue));
+				backtestResultsMetaDataMap.get(currName).printMetaData();
+			} else {
+				log.info("no currency orders!");
+			}
 		});
 
 		log.info("-----------");
 		log.info("TRADE PROFIT: {}", tradeName);
 		log.info("-----------");
-		log.info("balance: {}/{} amount: {}/{}", backtestResultsMap.get(TRADE_KEY).getFinalBalance(),
-				backtestResultsMap.get(TRADE_KEY).getInitialBalance(),
-				backtestResultsMap.get(TRADE_KEY).getFinalAmount(),
-				backtestResultsMap.get(TRADE_KEY).getInitialAmount());
+		if (!backtestResultsMap.isEmpty()) {
+			log.info("balance: {}/{}/{}% amount: {}/{}/{}%", backtestResultsMap.get(TRADE_KEY).getFinalBalance(),
+					backtestResultsMap.get(TRADE_KEY).getInitialBalance(),
+					NumericFunctions.percentage(backtestResultsMap.get(TRADE_KEY).getFinalBalance(),
+							backtestResultsMap.get(TRADE_KEY).getInitialBalance(), false),
+					backtestResultsMap.get(TRADE_KEY).getFinalAmount(),
+					backtestResultsMap.get(TRADE_KEY).getInitialAmount(),
+					NumericFunctions.percentage(backtestResultsMap.get(TRADE_KEY).getFinalAmount(),
+							backtestResultsMap.get(TRADE_KEY).getInitialAmount(), false));
 
-		backtestResultsMetaDataMap.get(TRADE_KEY).printMetaData();
-
-		// set and run analysis criteria
-		criterion = new TotalProfitCriterion();
-		criterionValue = criterion.calculate(exchangeTrade.getTradeTimeSeries(), exchangeTrade.getTradeTradingRecord());
-		log.info("criteria: TotalProfitCriterion value: {}", criterionValue);
-		backtestResultsMap.get(TRADE_KEY).setTotalProfit(BigDecimal.valueOf(criterionValue));
-
-		criterion = new BuyAndHoldCriterion();
-		criterionValue = criterion.calculate(exchangeTrade.getTradeTimeSeries(), exchangeTrade.getTradeTradingRecord());
-		log.info("criteria: BuyAndHoldCriterion value: {}", criterionValue);
-		backtestResultsMap.get(TRADE_KEY).setBuyAndHold(BigDecimal.valueOf(criterionValue));
-
-		criterion = new VersusBuyAndHoldCriterion(new TotalProfitCriterion());
-		criterionValue = criterion.calculate(exchangeTrade.getTradeTimeSeries(), exchangeTrade.getTradeTradingRecord());
-		log.info("criteria: VersusBuyAndHoldCriterion value: {}", criterionValue);
-		backtestResultsMap.get(TRADE_KEY).setVersusBuyAndHold(BigDecimal.valueOf(criterionValue));
+			backtestResultsMetaDataMap.get(TRADE_KEY).printMetaData();
+		} else {
+			log.info("no trade orders!");
+		}
 
 		backtestResultsRepository.saveAll(backtestResultsMap.values());
 
@@ -421,10 +406,11 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 		log.debug("done");
 	}
 
-	@Override
-	public void uncaughtException(Thread t, Throwable e) {
+	private void interruptBacktest(Thread t, Throwable e) {
 		log.error("start. exception on thread:{}", t.getName());
 		log.error("exception: {}", e);
+
+		commands.sendMessage("Backtest " + tradeName + " Exception: " + e.toString(), true);
 
 		// sends the interrupt to itself
 		if (t.isAlive() || !t.isInterrupted()) {
@@ -436,14 +422,19 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 	}
 
 	@Override
+	public void uncaughtException(Thread t, Throwable e) {
+		interruptBacktest(t, e);
+	}
+
+	@Override
 	public void run() {
-		log.debug("start");
+		log.info("start");
 
 		Thread.currentThread().setUncaughtExceptionHandler(this);
 
 		Thread.currentThread().setName("B_" + exchangeEnum.getName() + "_" + tradeName);
 		backTest();
 
-		log.debug("done");
+		log.info("done");
 	}
 }

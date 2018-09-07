@@ -13,7 +13,7 @@ import lombok.Setter;
 @Setter
 public class ExchangeJson {
 	String name;
-	long HistoryDays;
+	long tradeHistoryDays;
 	BigDecimal fee;
 	Boolean sandbox;
 	Boolean allowFakeTrades;
@@ -50,10 +50,29 @@ public class ExchangeJson {
 
 	@Getter
 	@Setter
+	public static class TradeStrategies {
+		String strategyName;
+		ArrayList<String> currencyPairs;
+	}
+
+	@Getter
+	@Setter
 	public static class TradeConfigs {
 		String tradeName;
-		ArrayList<String> currencyPairs;
-		ArrayList<String> strategies;
+		ArrayList<TradeStrategies> strategies;
+
+		public ArrayList<String> getCurrencyPairs() {
+			ArrayList<String> currencyPairs = new ArrayList<>();
+			strategies.forEach(strategy -> {
+				strategy.currencyPairs.stream().forEach(currency -> {
+					if (currencyPairs.isEmpty() || !currencyPairs.contains(currency)) {
+						currencyPairs.add(currency);
+					}
+				});
+			});
+
+			return currencyPairs;
+		}
 	}
 
 	public Map<String, TradeConfigs> getTradeConfigsMap() {

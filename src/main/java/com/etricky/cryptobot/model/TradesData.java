@@ -54,11 +54,13 @@ public class TradesData {
 		tradeGapList.add(TradeGapPeriod.builder().start(start).end(end).build());
 	}
 
-	public Optional<List<TradeGapPeriod>> getTradeGaps(String exchange, String currency, long startPeriod, long endPeriod) {
+	public Optional<List<TradeGapPeriod>> getTradeGaps(String exchange, String currency, long startPeriod,
+			long endPeriod) {
 		long dataStartPeriod = 0, dataEndPeriod = 0;
 
-		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{}", exchange, currency, startPeriod,
-				DateFunctions.getStringFromUnixTime(startPeriod), endPeriod, DateFunctions.getStringFromUnixTime(endPeriod));
+		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{}", exchange, currency,
+				startPeriod, DateFunctions.getStringFromUnixTime(startPeriod), endPeriod,
+				DateFunctions.getStringFromUnixTime(endPeriod));
 
 		// ensures a clean gap list
 		tradeGapList = new ArrayList<>();
@@ -69,7 +71,8 @@ public class TradesData {
 		dataStartPeriod = ((BigInteger) dataValues.get(0)[0]).longValue();
 		dataEndPeriod = ((BigInteger) dataValues.get(0)[1]).longValue();
 
-		log.debug("dataStartPeriod: {}/{} dataEndPeriod: {}/{}", dataStartPeriod, DateFunctions.getStringFromUnixTime(dataStartPeriod), dataEndPeriod,
+		log.debug("dataStartPeriod: {}/{} dataEndPeriod: {}/{}", dataStartPeriod,
+				DateFunctions.getStringFromUnixTime(dataStartPeriod), dataEndPeriod,
 				DateFunctions.getStringFromUnixTime(dataEndPeriod));
 
 		if (dataStartPeriod == 0) {
@@ -104,9 +107,11 @@ public class TradesData {
 		return Optional.ofNullable(tradeGapList);
 	}
 
-	public List<TradeEntity> getTradesInPeriod(String exchange, String currency, long startPeriod, long endPeriod, boolean includeFake) {
-		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{} includeFake: {}", exchange, currency, startPeriod,
-				DateFunctions.getStringFromUnixTime(startPeriod), endPeriod, DateFunctions.getStringFromUnixTime(endPeriod), includeFake);
+	public List<TradeEntity> getTradesInPeriod(String exchange, String currency, long startPeriod, long endPeriod,
+			boolean includeFake) {
+		log.debug("start. exhange: {} currency: {} startPeriod: {}/{} endPeriod: {}/{} includeFake: {}", exchange,
+				currency, startPeriod, DateFunctions.getStringFromUnixTime(startPeriod), endPeriod,
+				DateFunctions.getStringFromUnixTime(endPeriod), includeFake);
 		List<TradeEntity> tradesList;
 
 		if (includeFake) {
@@ -128,12 +133,14 @@ public class TradesData {
 
 		log.debug("start");
 
-		days = new Long(jsonFiles.getSettingsJson().getCleanOldRecords());
-		if (days != 0) {
-			long unixTime = DateFunctions.getUnixTimeFromZDT(DateFunctions.getZDTNow().minusDays(days));
-			log.debug("unixTime: {}/{}", unixTime, DateFunctions.getZDTfromUnixTime(unixTime));
+		if (jsonFiles.getSettingsJson().getCleanOldRecords()) {
+			days = jsonFiles.getSettingsJson().getNbrOldRecords();
+			if (days != 0) {
+				long unixTime = DateFunctions.getUnixTimeFromZDT(DateFunctions.getZDTNow().minusDays(days));
+				log.debug("unixTime: {}/{}", unixTime, DateFunctions.getZDTfromUnixTime(unixTime));
 
-			records = tradesEntityRepository.deleteOldRecords(unixTime);
+				records = tradesEntityRepository.deleteOldRecords(unixTime);
+			}
 		}
 
 		log.debug("done. records: {}", records);

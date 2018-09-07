@@ -6,7 +6,6 @@ import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeTrading;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.Commands;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
-import com.etricky.cryptobot.core.strategies.common.TimeSeriesHelper;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -14,9 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component("bitstampTradingBean")
 public class BitstampTrading extends AbstractExchangeTrading {
 
-	public BitstampTrading(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles,
-			TimeSeriesHelper timeSeriesHelper) {
-		super(exchangeThreads, commands, jsonFiles, timeSeriesHelper);
+	public BitstampTrading(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles) {
+		super(exchangeThreads, commands, jsonFiles);
 	}
 
 	private void startTrade() {

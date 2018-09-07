@@ -3,3 +3,13 @@
 @param tradeEntity The trade values reported by the exchange
 @param strategy    Strategy that is being executed
 @param barDuration Duration of each bar of the time series
+@param balance     Current available balance
+@param amount      Current available amount
+@param feeValue The value of the fee that will be payed to execute the order
+@param highPrice Highest price since last order
+@param lowPrice Lowest price since last order
+@param lastOrderBalance Balance available on the last order
+@param lastOrderAmount Amount available on the last order
+@param lastOrderType   Type of the last order (BUY or SELL)
+@param exchangeBalance Balance available on the exchange
+@param exchangeAmount Amount available on the exchange

@@ -8,6 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class StrategiesJson {
+	String type;
 	String bean;
 	Integer barDurationSec;
 	Integer initialPeriod;

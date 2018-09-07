@@ -12,7 +12,7 @@ import javax.persistence.Table;
 import org.ta4j.core.Order;
 
 import com.etricky.cryptobot.core.common.NumericFunctions;
-import com.etricky.cryptobot.model.primaryKeys.BacktestPK;
+import com.etricky.cryptobot.model.pks.BacktestPK;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

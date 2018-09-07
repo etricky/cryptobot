@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 public enum CurrencyEnum {
 	BTC_EUR("BTC_EUR", "BTC", "EUR", CurrencyPair.BTC_EUR), BTC_USD("BTC_USD", "BTC", "USD", CurrencyPair.BTC_USD),
-	ETH_EUR("ETH_EUR", "ETH", "EUR", CurrencyPair.ETH_EUR), LTC_EUR("LTC_EUR", "LTC", "EUR", CurrencyPair.XRP_EUR),
+	ETH_EUR("ETH_EUR", "ETH", "EUR", CurrencyPair.ETH_EUR), LTC_EUR("LTC_EUR", "LTC", "EUR", CurrencyPair.LTC_EUR),
 	XRP_EUR("XRP_EUR", "XRP", "EUR", CurrencyPair.XRP_EUR);
 
 	String shortName;
@@ -29,7 +29,7 @@ public enum CurrencyEnum {
 	}
 
 	public static Optional<CurrencyEnum> getInstanceByShortName(String shortName) {
-		log.debug("start. shortName: {}", shortName);
+		log.trace("start. shortName: {}", shortName);
 
 		if (shortName.equalsIgnoreCase(BTC_EUR.shortName)) {
 			return Optional.of(CurrencyEnum.BTC_EUR);
@@ -42,8 +42,16 @@ public enum CurrencyEnum {
 		} else if (shortName.equalsIgnoreCase(XRP_EUR.shortName)) {
 			return Optional.of(CurrencyEnum.XRP_EUR);
 		} else {
-			log.debug("no currency match");
+			log.trace("no currency match");
 			return Optional.empty();
 		}
+	}
+
+	public static Optional<CurrencyEnum> getInstanceByQuoteBase(String base, String quote) {
+		if (getInstanceByShortName(base + "_" + quote).isPresent()) {
+			return getInstanceByShortName(base + "_" + quote);
+		}
+
+		return Optional.empty();
 	}
 }

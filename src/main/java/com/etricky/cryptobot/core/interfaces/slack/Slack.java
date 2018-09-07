@@ -27,23 +27,40 @@ public class Slack implements SlackMessagePostedListener {
 	@Autowired
 	private ShellCommands shellCcommands;
 	private static String slack = "slack";
+	private SlackJson slackJson;
 
-	public Slack(JsonFiles jsonFiles) throws IOException {
+	public Slack(JsonFiles jsonFiles) {
 		log.debug("creating slack channel");
 
-		SlackJson slackJson = jsonFiles.getSlackJson();
+		slackJson = jsonFiles.getSlackJson();
 		session = SlackSessionFactory.createWebSocketSlackSession(slackJson.getKey());
 		session.addMessagePostedListener(this);
-		session.connect();
-		channel = session.findChannelByName(slackJson.getChannel()); // make sure bot is a member of the channel.
+
+		connect(false);
 
 		log.debug("done");
+	}
+
+	private void connect(boolean reconnect) {
+		try {
+			session.connect();
+			channel = session.findChannelByName(slackJson.getChannel()); // make sure bot is a member of the channel.
+		} catch (Exception e) {
+			if (!reconnect) {
+				log.error("Exception: {}", e);
+			}
+		}
 	}
 
 	public void sendMessage(String message) {
 		log.debug("start. message: {}", message);
 
-		session.sendMessage(channel, message);
+		if (session.isConnected()) {
+			session.sendMessage(channel, message);
+		} else {
+			log.warn("No connection to Slack!");
+			connect(true);
+		}
 
 		log.debug("done");
 	}
@@ -51,7 +68,12 @@ public class Slack implements SlackMessagePostedListener {
 	public void disconnect() throws IOException {
 		log.debug("start");
 
-		session.disconnect();
+		if (session.isConnected()) {
+			session.disconnect();
+		} else {
+			log.warn("No connection to Slack!");
+			connect(true);
+		}
 
 		log.debug("done");
 	}

@@ -1,14 +1,18 @@
 package com.etricky.cryptobot.core.exchanges.gdax.trading;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
+import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.model.TradeEntity;
 import com.etricky.cryptobot.model.TradesData;
-import com.etricky.cryptobot.model.primaryKeys.ExchangePK;
+import com.etricky.cryptobot.model.pks.ExchangePK;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +32,9 @@ public class GdaxLiveTrades {
 		this.gdaxTrading = gdaxTrading;
 	}
 
-	public void processLiveTrade(Trade trade) {
+	public void processLiveTrade(Trade trade) throws ExchangeException {
+		long missingTrades = 0;
+
 		log.debug("start. trade: {}", trade);
 
 		long now = DateFunctions.getUnixTimeNowToEvenMinute();
@@ -57,20 +63,40 @@ public class GdaxLiveTrades {
 				// checks for missing trades
 				if (now - lastTradeUnixTime > 60) {
 					// removes 60s of the current minute
-					log.debug("missing trades #: {}", (now - lastTradeUnixTime - 60) / 60);
+					missingTrades = (now - lastTradeUnixTime - 60) / 60;
 
-					// creates fake trade
-					TradeEntity fakeTradeEntity = lastTradeEntity.getFake().addMinute();
-					for (int i = 0; i < (now - lastTradeUnixTime - 60) / 60; i++) {
-						// stores fake trade
-						storeTradeData(fakeTradeEntity);
-						// creates new fake trade
-						fakeTradeEntity = fakeTradeEntity.getFake().addMinute();
+					log.debug("missing trades #: {}", missingTrades);
+
+					if (missingTrades > 2) {
+						log.debug("possible network failure has occurred!");
+
+						// gets the last trades from the exchange
+						gdaxTrading.processTradeHistory(
+								Optional.of(DateFunctions.getZDTfromUnixTime(lastTradeUnixTime)),
+								Optional.of(DateFunctions.getZDTfromUnixTime(now)));
+
+						List<TradeEntity> listTradeEntity = tradesData.getTradesInPeriod(
+								gdaxTrading.getExchangeEnum().getName(), gdaxTrading.getCurrencyEnum().getShortName(),
+								lastTradeUnixTime, now, gdaxTrading.getExchangeJson().getAllowFakeTrades());
+
+						listTradeEntity.forEach(tradeEntity -> {
+							storeTradeData(tradeEntity);
+						});
+					} else {
+
+						// creates fake trade
+						TradeEntity fakeTradeEntity = lastTradeEntity.getFake().addMinute();
+						for (int i = 0; i < (now - lastTradeUnixTime - 60) / 60; i++) {
+							// stores fake trade
+							storeTradeData(fakeTradeEntity);
+							// creates new fake trade
+							fakeTradeEntity = fakeTradeEntity.getFake().addMinute();
+						}
 					}
 				}
 
 				// creates new trade for the current minute
-				mapGdaxTradeToTradeEntity(trade, now);
+				lastTradeEntity = mapGdaxTradeToTradeEntity(trade, now);
 				lastTradeUnixTime = now;
 			}
 		}
@@ -85,7 +111,7 @@ public class GdaxLiveTrades {
 		tradesData.getTradesEntityRepository().save(tradeEntity);
 
 		// executes the trading strategies for the new trade
-		gdaxTrading.processStrategiesForLiveTrade(tradeEntity, false);
+		gdaxTrading.notifyListeners(tradeEntity, true);
 
 		log.debug("done");
 	}
@@ -111,15 +137,14 @@ public class GdaxLiveTrades {
 		log.debug("done");
 	}
 
-	private void mapGdaxTradeToTradeEntity(Trade trade, long now) {
-		log.debug("start");
+	private TradeEntity mapGdaxTradeToTradeEntity(Trade trade, long now) {
+		log.trace("start");
 
-		lastTradeEntity = TradeEntity.builder().openPrice(trade.getPrice()).closePrice(trade.getPrice())
-				.lowPrice(trade.getPrice()).highPrice(trade.getPrice()).timestamp(DateFunctions.getZDTfromUnixTime(now))
+		return TradeEntity.builder().openPrice(trade.getPrice()).closePrice(trade.getPrice()).lowPrice(trade.getPrice())
+				.highPrice(trade.getPrice()).timestamp(DateFunctions.getZDTfromUnixTime(now))
 				.tradeId(ExchangePK.builder().currency(gdaxTrading.getCurrencyEnum().getShortName())
 						.exchange(gdaxTrading.getExchangeEnum().getName()).unixtime(now).build())
 				.build();
 
-		log.debug("done");
 	}
 }

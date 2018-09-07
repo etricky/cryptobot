@@ -169,11 +169,11 @@ public class ShellCommands implements Quit.Command {
 
 	@ShellMethod(value = "Starts processing a trade from an exchange", key = { "start", "s" })
 	public void start(String exchange, String tradeName,
-			@ShellOption(defaultValue = "0", help = "0 - All, 1 - History, 2 - Live") int tradeType) {
+			@ShellOption(defaultValue = "0", help = "0 - All, 1 - History Only, 2 - Dry Run Trades") int tradeType) {
 
 		log.debug("start. exchange: {} tradeName: {} tradeType: {}", exchange, tradeName, tradeType);
 
-		commands.startExchangeTrade(exchange, tradeName, tradeType);
+		commands.startExchangeTrade(exchange.toUpperCase(), tradeName.toUpperCase(), tradeType);
 
 		log.debug("done");
 	}

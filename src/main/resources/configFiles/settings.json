@@ -1,3 +1,4 @@
 {
-	"cleanOldRecords": "0"
+	"cleanOldRecords": false,
+	"nbrOldRecords": 120
 }

@@ -24,18 +24,18 @@ public class JsonFiles {
 		log.debug("start");
 
 		this.jsonReader = jsonReader;
-		loadFiles();
+		initialize();
 
 		log.debug("done");
 	}
 
-	public Map<String, ExchangeJson> getExchangesJson() {
+	public Map<String, ExchangeJson> getExchangesJsonMap() {
 		Map<String, ExchangeJson> mapExc = Arrays.asList(exchangesJson).stream()
 				.collect(Collectors.toMap(ExchangeJson::getName, Function.identity()));
 		return mapExc;
 	}
 
-	public Map<String, StrategiesJson> getStrategiesJson() {
+	public Map<String, StrategiesJson> getStrategiesJsonMap() {
 		Map<String, StrategiesJson> mapExc = Arrays.asList(strategiesJson).stream()
 				.collect(Collectors.toMap(StrategiesJson::getBean, Function.identity()));
 		return mapExc;
@@ -49,7 +49,7 @@ public class JsonFiles {
 		return settingsJson;
 	}
 
-	public void loadFiles() throws ExchangeException {
+	public void initialize() throws ExchangeException {
 		log.debug("start");
 
 		exchangesJson = jsonReader.getJsonObject("exchanges.json", ExchangeJson[].class);

@@ -11,7 +11,6 @@ import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
-import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.StopOrder;
 import org.knowm.xchange.gdax.dto.trade.GDAXOrderFlags;
 import org.springframework.stereotype.Component;
@@ -89,10 +88,10 @@ public class GdaxOrders extends AbstractExchangeOrders {
 		log.debug("done. orderId: {}", orderId);
 	}
 
-	public void getOpenOrders() throws IOException {
+	public void getOpenOrders() {
 		log.debug("start");
 
-		OpenOrders openOrders = gdaxAccount.getExchange().getTradeService().getOpenOrders();
+//		OpenOrders openOrders = gdaxAccount.getExchange().getTradeService().getOpenOrders();
 
 		log.debug("done");
 	}

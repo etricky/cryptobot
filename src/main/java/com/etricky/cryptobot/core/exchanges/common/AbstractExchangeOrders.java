@@ -40,14 +40,4 @@ public abstract class AbstractExchangeOrders extends AbstractExchange implements
 		log.debug("done");
 	}
 
-	@Override
-	protected void exchangeDisconnect() {
-		log.debug("start");
-
-		exchangeThreads.stopExchangeThreads(exchangeEnum.getName());
-
-		commands.sendMessage("Stopped orders for exchange: " + exchangeEnum.getTradingBean(), true);
-
-		log.debug("done");
-	}
 }

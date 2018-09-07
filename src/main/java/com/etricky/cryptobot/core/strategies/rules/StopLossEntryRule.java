@@ -7,11 +7,15 @@ import org.ta4j.core.trading.rules.AbstractRule;
 
 import com.etricky.cryptobot.core.common.NumericFunctions;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.StrategiesJson;
+import com.etricky.cryptobot.core.strategies.common.AbstractStrategy;
 
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class TraillingStopLossEntryRule extends AbstractRule {
+public class StopLossEntryRule extends AbstractRule {
+	@Setter
+	private AbstractStrategy abstractStrategy;
 
 	private ClosePriceIndicator closePriceIndicator;
 	private Decimal lossPercentage1;
@@ -20,12 +24,10 @@ public class TraillingStopLossEntryRule extends AbstractRule {
 	private Decimal gainPercentage1;
 	// private Decimal gainPercentage2;
 	// private Decimal gainPercentage3;
-	private Decimal feePercentage;
 
 	private StrategiesJson strategiesSettings;
 
-	public TraillingStopLossEntryRule(ClosePriceIndicator closePriceIndicator, Decimal feePercentage,
-			StrategiesJson strategiesSettings) {
+	public StopLossEntryRule(ClosePriceIndicator closePriceIndicator, StrategiesJson strategiesSettings) {
 		this.closePriceIndicator = closePriceIndicator;
 		this.gainPercentage1 = Decimal.valueOf(strategiesSettings.getEntryGainPercentage1()).dividedBy(100);
 		// this.gainPercentage2 =
@@ -39,37 +41,30 @@ public class TraillingStopLossEntryRule extends AbstractRule {
 		// this.lossPercentage3 =
 		// Decimal.valueOf(strategiesSettings.getEntryLossPercentage3()).dividedBy(100);
 
-		this.feePercentage = feePercentage.dividedBy(100);
-
 		this.strategiesSettings = strategiesSettings;
+
+		log.debug("gainPercentage1: {} lossPercentage1: {}", gainPercentage1, lossPercentage1);
 	}
 
 	@Override
 	public boolean isSatisfied(int index, TradingRecord tradingRecord) {
 		boolean result = false;
-		Decimal closePrice, sellPrice, lowPrice, feeValue, gainValue, amount, initialAmount, initialBalance,
-				deltaAmount, rule10;
+		Decimal closePrice, sellPrice, lowPrice, gainValue, amount, initialAmount, balance, deltaAmount, rule10;
 
 		if (strategiesSettings.getEntryEnabled()) {
 			log.trace("start. index: {}", index);
 
 			if (tradingRecord.getCurrentTrade().isNew() && tradingRecord.getLastExit() != null) {
-				initialAmount = tradingRecord.getLastExit().getAmount();
-				initialBalance = tradingRecord.getLastExit().getPrice().multipliedBy(initialAmount);
-
-				// exit and entry fees
-				feeValue = initialBalance.multipliedBy(feePercentage);
-				initialBalance = initialBalance.minus(feeValue);
-				feeValue = initialBalance.multipliedBy(feePercentage);
-				initialBalance = initialBalance.minus(feeValue);
-
+				initialAmount = Decimal.valueOf(abstractStrategy.getExchangeAmount());
+				// balance of the last sell minus the fee
+				balance = Decimal.valueOf(abstractStrategy.getBalance());
 				closePrice = closePriceIndicator.getValue(index);
-				sellPrice = tradingRecord.getLastExit().getPrice();
-				lowPrice = getLowPrice(index, tradingRecord, closePriceIndicator);
+				sellPrice = tradingRecord.getLastExit() != null ? tradingRecord.getLastExit().getPrice() : Decimal.ZERO;
+				lowPrice = Decimal.valueOf(abstractStrategy.getLowPrice());
 
 				gainValue = lowPrice.multipliedBy(gainPercentage1);
 				rule10 = lowPrice.plus(gainValue);
-				amount = initialBalance.dividedBy(closePrice);
+				amount = balance.dividedBy(closePrice);
 				deltaAmount = amount.minus(initialAmount).dividedBy(amount);
 
 				// closePrice > lowPrice * gain && closePrice < sellPrice
@@ -86,10 +81,9 @@ public class TraillingStopLossEntryRule extends AbstractRule {
 						NumericFunctions.convertToBigDecimal(deltaAmount.abs(), NumericFunctions.PERCENTAGE_SCALE),
 						NumericFunctions.convertToBigDecimal(lossPercentage1, NumericFunctions.PERCENTAGE_SCALE),
 						result);
-				log.trace("\t\tlp:{} sp: {} fee: {}",
+				log.trace("\t\tlp:{} sp: {}",
 						NumericFunctions.convertToBigDecimal(lowPrice, NumericFunctions.PRICE_SCALE),
-						NumericFunctions.convertToBigDecimal(sellPrice, NumericFunctions.PRICE_SCALE),
-						NumericFunctions.convertToBigDecimal(feeValue, NumericFunctions.PRICE_SCALE));
+						NumericFunctions.convertToBigDecimal(sellPrice, NumericFunctions.PRICE_SCALE));
 
 			} else {
 				log.trace("no trading record");
@@ -99,16 +93,5 @@ public class TraillingStopLossEntryRule extends AbstractRule {
 		log.trace("done. result: {}", result);
 		// result = false;
 		return result;
-	}
-
-	private Decimal getLowPrice(int index, TradingRecord tradingRecord, ClosePriceIndicator closePriceIndicator) {
-		int sellIndex = tradingRecord.getLastExit().getIndex();
-		Decimal lowPrice = tradingRecord.getLastExit().getPrice();
-		for (int i = sellIndex; i <= index; i++) {
-			if (lowPrice.isGreaterThan(closePriceIndicator.getValue(i))) {
-				lowPrice = closePriceIndicator.getValue(i);
-			}
-		}
-		return lowPrice;
 	}
 }

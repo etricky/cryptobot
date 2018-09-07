@@ -1,6 +1,7 @@
 package com.etricky.cryptobot.model;
 
 import java.math.BigDecimal;
+import java.time.ZonedDateTime;
 
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
@@ -8,7 +9,7 @@ import javax.persistence.Entity;
 import javax.persistence.Table;
 
 import com.etricky.cryptobot.core.common.NumericFunctions;
-import com.etricky.cryptobot.model.primaryKeys.BacktestPK;
+import com.etricky.cryptobot.model.pks.BacktestPK;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,18 +29,11 @@ public class BacktestResultsEntity {
 	private BacktestPK backtestId;
 	@NonNull
 	private String currency;
+	private String notes;
 	@NonNull
-	@Builder.Default
-	@Column(precision = 12, scale = NumericFunctions.BALANCE_SCALE)
-	private BigDecimal totalProfit = BigDecimal.ZERO;
+	private ZonedDateTime tradeStart;
 	@NonNull
-	@Builder.Default
-	@Column(precision = 12, scale = NumericFunctions.BALANCE_SCALE)
-	private BigDecimal buyAndHold = BigDecimal.ZERO;
-	@NonNull
-	@Builder.Default
-	@Column(precision = 12, scale = NumericFunctions.BALANCE_SCALE)
-	private BigDecimal versusBuyAndHold = BigDecimal.ZERO;
+	private ZonedDateTime tradeEnd;
 	@NonNull
 	@Builder.Default
 	@Column(precision = 12, scale = NumericFunctions.BALANCE_SCALE)
@@ -50,12 +44,20 @@ public class BacktestResultsEntity {
 	private BigDecimal finalBalance = BigDecimal.ZERO;
 	@NonNull
 	@Builder.Default
+	@Column(precision = 12, scale = NumericFunctions.PERCENTAGE_SCALE)
+	private BigDecimal deltaBalance = BigDecimal.ZERO;
+	@NonNull
+	@Builder.Default
 	@Column(precision = 12, scale = NumericFunctions.AMOUNT_SCALE)
 	private BigDecimal initialAmount = BigDecimal.ZERO;
 	@NonNull
 	@Builder.Default
 	@Column(precision = 12, scale = NumericFunctions.AMOUNT_SCALE)
 	private BigDecimal finalAmount = BigDecimal.ZERO;
+	@NonNull
+	@Builder.Default
+	@Column(precision = 12, scale = NumericFunctions.PERCENTAGE_SCALE)
+	private BigDecimal deltaAmount = BigDecimal.ZERO;
 	@NonNull
 	@Builder.Default
 	@Column(precision = 12, scale = NumericFunctions.PRICE_SCALE)
