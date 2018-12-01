@@ -4,7 +4,7 @@ import java.io.IOException;
 
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.gdax.GDAXExchange;
+import org.knowm.xchange.coinbasepro.CoinbaseProExchange;
 import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.threads.ThreadExecutors;
@@ -32,7 +32,7 @@ public class GdaxAccount extends AbstractExchangeAccount {
 		log.debug("start");
 
 		try {
-			ExchangeSpecification exSpec = new GDAXExchange().getDefaultExchangeSpecification();
+			ExchangeSpecification exSpec = new CoinbaseProExchange().getDefaultExchangeSpecification();
 
 			exchangeJson = this.jsonFiles.getExchangesJsonMap().get(ExchangeEnum.GDAX.getName());
 

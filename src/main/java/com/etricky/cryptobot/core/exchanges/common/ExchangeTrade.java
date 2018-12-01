@@ -12,9 +12,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.ta4j.core.BaseTradingRecord;
-import org.ta4j.core.Decimal;
 import org.ta4j.core.Order.OrderType;
 import org.ta4j.core.TradingRecord;
+import org.ta4j.core.num.PrecisionNum;
 
 import com.etricky.cryptobot.core.exchanges.common.enums.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
@@ -92,17 +92,17 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 		this.tradeName = tradeName;
 		this.tradeType = tradeType;
 
-		if (tradeType == AbstractExchangeTrading.TRADE_FULL) {
+		if (tradeType == AbstractExchangeTrading.TRADE_TYPE_FULL) {
 			dryRunTrade = false;
 			historyOnlyTrade = false;
 			fullTrade = true;
 			backtestTrade = false;
-		} else if (tradeType == AbstractExchangeTrading.TRADE_DRY_RUN) {
+		} else if (tradeType == AbstractExchangeTrading.TRADE_TYPE_DRY_RUN) {
 			dryRunTrade = true;
 			historyOnlyTrade = false;
 			fullTrade = false;
 			backtestTrade = false;
-		} else if (tradeType == AbstractExchangeTrading.TRADE_HISTORY_ONLY) {
+		} else if (tradeType == AbstractExchangeTrading.TRADE_TYPE_HISTORY_ONLY) {
 			dryRunTrade = false;
 			historyOnlyTrade = true;
 			fullTrade = false;
@@ -112,6 +112,7 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 			historyOnlyTrade = false;
 			fullTrade = false;
 			backtestTrade = true;
+			exchangeBalance = BigDecimal.valueOf(100);
 		}
 
 		initializeCurrencies();
@@ -138,8 +139,7 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 						ExchangeTradeCurrency exchangeTradeCurrency = (ExchangeTradeCurrency) appContext
 								.getBean(ExchangeTradeCurrency.BEAN_NAME);
 
-						exchangeTradeCurrency.initialize(exchangeEnum.getName(), currencyName, tradeName,
-								backtestTrade);
+						exchangeTradeCurrency.initialize(exchangeEnum.getName(), currencyName, tradeName);
 
 						exchangeTradeCurrencyMap.put(currencyName, exchangeTradeCurrency);
 
@@ -216,9 +216,11 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 
 		// adds the order to the exchange trading record
 		if (orderType == AbstractStrategy.ENTER) {
-			tradeTradingRecord.enter(tradingRecordEndIndex++, Decimal.valueOf(price), Decimal.valueOf(exchangeAmount));
+			tradeTradingRecord.enter(tradingRecordEndIndex++, PrecisionNum.valueOf(price),
+					PrecisionNum.valueOf(exchangeAmount));
 		} else {
-			tradeTradingRecord.exit(tradingRecordEndIndex++, Decimal.valueOf(price), Decimal.valueOf(exchangeAmount));
+			tradeTradingRecord.exit(tradingRecordEndIndex++, PrecisionNum.valueOf(price),
+					PrecisionNum.valueOf(exchangeAmount));
 		}
 
 		log.info("{} strategy: {} currency {} balance: {} amount: {}", AbstractStrategy.getOrderTypeString(orderType),
@@ -379,6 +381,8 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 
 		if (backtestTrade) {
 			if (result != AbstractStrategy.NO_ACTION) {
+				exchangeAmount = returnStrategyResult[CURRENCY].getAmount();
+				exchangeBalance = returnStrategyResult[CURRENCY].getBalance();
 
 				newTradingOrder(result, tradeEntity.getTradeId().getCurrency(), tradeEntity.getClosePrice(),
 						returnStrategyResult[CURRENCY].getStrategyName());
@@ -388,9 +392,6 @@ public class ExchangeTrade extends AbstractExchange implements PropertyChangeLis
 				// copies the strategyResult to a new object to be returned
 				returnStrategyResult[TRADE] = returnStrategyResult[CURRENCY].toBuilder().build();
 				returnStrategyResult[TRADE].setResult(result);
-
-				exchangeAmount = returnStrategyResult[TRADE].getAmount();
-				exchangeBalance = returnStrategyResult[TRADE].getBalance();
 
 			} else {
 				// no trade was made with this currency

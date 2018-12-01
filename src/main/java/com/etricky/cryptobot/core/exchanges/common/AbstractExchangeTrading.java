@@ -2,6 +2,8 @@ package com.etricky.cryptobot.core.exchanges.common;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.time.ZonedDateTime;
+import java.util.Optional;
 
 import com.etricky.cryptobot.core.common.threads.ThreadInfo;
 import com.etricky.cryptobot.core.exchanges.common.enums.CurrencyEnum;
@@ -21,9 +23,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class AbstractExchangeTrading extends AbstractExchange implements Runnable {
 
-	public static final int TRADE_FULL = 0;
-	public static final int TRADE_HISTORY_ONLY = 1;
-	public static final int TRADE_DRY_RUN = 2;
+	public static final int TRADE_TYPE_FULL = 0;
+	public static final int TRADE_TYPE_HISTORY_ONLY = 1;
+	public static final int TRADE_TYPE_DRY_RUN = 2;
 	public static final int TRADE_BACKTEST = 3;
 	public static final String PROPERTY_LIVE_TRADE = "liveTrade";
 	public static final String PROPERTY_HISTORY_TRADE = "historyTrade";
@@ -37,6 +39,9 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 	protected CurrencyEnum currencyEnum;
 	@Getter
 	protected boolean processingLiveTrades = false;
+
+	public abstract void processTradeHistory(Optional<ZonedDateTime> startPeriod, Optional<ZonedDateTime> endPeriod)
+			throws ExchangeException;
 
 	public AbstractExchangeTrading(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles) {
 		super(exchangeThreads, commands, jsonFiles);
@@ -109,7 +114,7 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 
 		// as the exchange trading object is shared between all trades, if a new trade
 		// starts that is incompatible with the current trading it must not start
-		if (tradeType == AbstractExchangeTrading.TRADE_FULL) {
+		if (tradeType == AbstractExchangeTrading.TRADE_TYPE_FULL) {
 			if (historyOnlyTrade) {
 				log.error("Incompatible trade type with existing history only trade");
 				throw new ExchangeException("Incompatible trade type with existing history only trade");
@@ -117,7 +122,7 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 
 			historyOnlyTrade = false;
 			fullTrade = true;
-		} else if (tradeType == AbstractExchangeTrading.TRADE_HISTORY_ONLY
+		} else if (tradeType == AbstractExchangeTrading.TRADE_TYPE_HISTORY_ONLY
 				|| tradeType == AbstractExchangeTrading.TRADE_BACKTEST) {
 			if (fullTrade) {
 				log.error("Incompatible trade type with existing full trade");

@@ -14,7 +14,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class StopLossEntryRule extends AbstractRule {
+public class StopLossEntryRule2 extends AbstractRule {
 	@Setter
 	private AbstractStrategy abstractStrategy;
 
@@ -23,17 +23,17 @@ public class StopLossEntryRule extends AbstractRule {
 	// private Num lossPercentage2;
 	// private Num lossPercentage3;
 	private Num gainPercentage1;
-	// private Num gainPercentage2;
+	private Num gainPercentage2;
 	// private Num gainPercentage3;
 
 	private StrategiesJson strategiesSettings;
 
-	public StopLossEntryRule(ClosePriceIndicator closePriceIndicator, StrategiesJson strategiesSettings) {
+	public StopLossEntryRule2(ClosePriceIndicator closePriceIndicator, StrategiesJson strategiesSettings) {
 		this.closePriceIndicator = closePriceIndicator;
 		this.gainPercentage1 = PrecisionNum.valueOf(strategiesSettings.getEntryGainPercentage1())
 				.dividedBy(PrecisionNum.valueOf(100));
-		// this.gainPercentage2 =
-		// PrecisionNum.valueOf(strategiesSettings.getEntryGainPercentage2()).dividedBy(PrecisionNum.valueOf(100));
+		this.gainPercentage2 = PrecisionNum.valueOf(strategiesSettings.getEntryGainPercentage2())
+				.dividedBy(PrecisionNum.valueOf(100));
 		// this.gainPercentage3 =
 		// PrecisionNum.valueOf(strategiesSettings.getEntryGainPercentage3()).dividedBy(PrecisionNum.valueOf(100));
 
@@ -46,13 +46,14 @@ public class StopLossEntryRule extends AbstractRule {
 
 		this.strategiesSettings = strategiesSettings;
 
-		log.debug("gainPercentage1: {} lossPercentage1: {}", gainPercentage1, lossPercentage1);
+		log.debug("gainPercentage1: {} lossPercentage1: {} gainPercentage2: {}", gainPercentage1, lossPercentage1,
+				gainPercentage2);
 	}
 
 	@Override
 	public boolean isSatisfied(int index, TradingRecord tradingRecord) {
 		boolean result = false;
-		Num closePrice, sellPrice, lowPrice, gainValue, amount, initialAmount, balance, deltaAmount, rule10;
+		Num closePrice, sellPrice, lowPrice, gainValue, amount, initialAmount, balance, deltaAmount, cl, rule10;
 
 		if (strategiesSettings.getEntryEnabled()) {
 			log.trace("start. index: {}", index);
@@ -71,19 +72,25 @@ public class StopLossEntryRule extends AbstractRule {
 				amount = balance.dividedBy(closePrice);
 				deltaAmount = amount.minus(initialAmount).dividedBy(amount);
 
+				cl = closePrice.minus(lowPrice).dividedBy(closePrice);
+
 				// closePrice > lowPrice * gain && closePrice < sellPrice
 				// OR deltaAmount > loss
+				// OR cl > gainPercentage2
 				if (closePrice.isGreaterThanOrEqual(rule10) && closePrice.isLessThanOrEqual(sellPrice)
-						|| (deltaAmount.isNegative() && deltaAmount.abs().isGreaterThanOrEqual(lossPercentage1))) {
+						|| (deltaAmount.isNegative() && deltaAmount.abs().isGreaterThanOrEqual(lossPercentage1))
+						|| cl.isGreaterThanOrEqual(gainPercentage2)) {
 					result = true;
 				}
 
-				log.trace("rule :: {} >= {} && cp < {} || {} >= {} -> {}",
+				log.trace("rule :: {} >= {} && cp < {} || {} >= {} || {} >= {} -> {}",
 						NumericFunctions.convertToBigDecimal(closePrice, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(rule10, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(sellPrice, NumericFunctions.PRICE_SCALE),
 						NumericFunctions.convertToBigDecimal(deltaAmount.abs(), NumericFunctions.PERCENTAGE_SCALE),
 						NumericFunctions.convertToBigDecimal(lossPercentage1, NumericFunctions.PERCENTAGE_SCALE),
+						NumericFunctions.convertToBigDecimal(cl, NumericFunctions.PERCENTAGE_SCALE),
+						NumericFunctions.convertToBigDecimal(gainPercentage2, NumericFunctions.PERCENTAGE_SCALE),
 						result);
 				log.trace("\t\tlp:{} sp: {}",
 						NumericFunctions.convertToBigDecimal(lowPrice, NumericFunctions.PRICE_SCALE),

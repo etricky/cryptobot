@@ -11,6 +11,14 @@ public class StrategiesJson {
 	String type;
 	String bean;
 	Integer barDurationSec;
+	/**
+	 * Initial period for which strategies will ignore new trades. This ensures that
+	 * when the strategy starts processing trades, the indicators values have been
+	 * correctly calculated
+	 * 
+	 * @param age Number of seconds for which strategies should ignore new trades
+	 * @return Number of seconds for which strategies should ignore new trades
+	 */
 	Integer initialPeriod;
 	Long timeSeriesBars;
 	Boolean entryEnabled;

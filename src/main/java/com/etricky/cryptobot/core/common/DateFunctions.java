@@ -34,13 +34,24 @@ public class DateFunctions {
 		return ZonedDateTime.now(UTC);
 	}
 
+	public static ZonedDateTime getZDTNowToEvenMinute() {
+		return getZDTfromUnixTime(getUnixTimeNowToEvenMinute());
+	}
+
+	public static ZonedDateTime getZDTToDayStart() {
+		return getZDTNow().withHour(0).withMinute(0).withSecond(0);
+	}
+
 	public static long getUnixTimeNow() {
 		return ZonedDateTime.now(UTC).toEpochSecond();
 	}
 
+	public static long getUnixTimeToDayStart() {
+		return getZDTToDayStart().toEpochSecond();
+	}
+
 	public static long getUnixTimeNowToEvenMinute() {
-		long unixTime = getUnixTimeNow();
-		return getZDTfromUnixTime(unixTime).minusSeconds(getZDTfromUnixTime(unixTime).getSecond()).toEpochSecond();
+		return getZDTNow().withSecond(0).toEpochSecond();
 	}
 
 	public static String getStringFromZDT(ZonedDateTime zdt, String logFormat) {

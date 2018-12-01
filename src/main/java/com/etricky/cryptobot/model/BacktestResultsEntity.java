@@ -87,4 +87,6 @@ public class BacktestResultsEntity {
 	private Integer stopLossSells = 0;
 	@Builder.Default
 	private BigDecimal totalFees = BigDecimal.ZERO;
+	@Builder.Default
+	private Boolean multiCurrency = false;
 }

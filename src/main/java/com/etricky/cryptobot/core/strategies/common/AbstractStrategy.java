@@ -154,7 +154,7 @@ public abstract class AbstractStrategy {
 
 			if (log.isTraceEnabled() && jsonFiles.getStrategiesJsonMap().get(strategy.getName()).getType()
 					.equalsIgnoreCase(STRATEGY_TYPE_TRADING))
-				debug(tradeEntity);
+				trace(tradeEntity);
 
 			if (currencyTradingRecord.getCurrentTrade().isNew()
 					&& strategy.shouldEnter(endIndex, currencyTradingRecord)) {
@@ -192,7 +192,7 @@ public abstract class AbstractStrategy {
 		return strategyResult;
 	}
 
-	private void debug(TradeEntity tradeEntity) {
+	private void trace(TradeEntity tradeEntity) {
 		int endIndex = timeSeries.getEndIndex();
 		ClosePriceIndicator closePrice = new ClosePriceIndicator(timeSeries);
 		TripleEMAIndicator tema = new TripleEMAIndicator(closePrice,
@@ -200,9 +200,11 @@ public abstract class AbstractStrategy {
 		DoubleEMAIndicator dema = new DoubleEMAIndicator(closePrice,
 				jsonFiles.getStrategiesJsonMap().get(beanName).getTimeFrameShort().intValue());
 
-		log.trace("index {} tema: {} dema: {} closePrice: {}/{}", timeSeries.getEndIndex(),
+		log.trace("index {} tema: {} dema: {} closePrice: {}/{} :: {}", timeSeries.getEndIndex(),
 				NumericFunctions.convertToBigDecimal(tema.getValue(endIndex), 2),
 				NumericFunctions.convertToBigDecimal(dema.getValue(endIndex), 2), tradeEntity.getClosePrice(),
-				tradeEntity.getTimestamp());
+				tradeEntity.getTimestamp(), NumericFunctions.convertToBigDecimal(tema.getValue(endIndex), 2)
+						.compareTo(NumericFunctions.convertToBigDecimal(dema.getValue(endIndex), 2)) == 1 ? ">" : "<");
+
 	}
 }

@@ -9,9 +9,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.ta4j.core.BaseTradingRecord;
-import org.ta4j.core.Decimal;
 import org.ta4j.core.Order.OrderType;
 import org.ta4j.core.TradingRecord;
+import org.ta4j.core.num.PrecisionNum;
 
 import com.etricky.cryptobot.core.common.NumericFunctions;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
@@ -39,7 +39,6 @@ public class ExchangeTradeCurrency {
 	@Getter
 	private String currencyName;
 	private TradingRecord currencyTradingRecord;
-	private boolean backtest;
 	private StrategyResult strategyResult, auxStrategyResult;
 	private int lowestBar = 0, tradingRecordEndIndex = 1;
 	private Map<String, AbstractStrategy> strategiesMap = new HashMap<>();
@@ -49,14 +48,12 @@ public class ExchangeTradeCurrency {
 	@Getter
 	private BigDecimal exchangeBalance = BigDecimal.ZERO, exchangeAmount = BigDecimal.ZERO;
 
-	public void initialize(String exchangeName, String currencyName, String tradeName, boolean backtest) {
-		log.debug("start. exchange: {} tradeName: {} currency: {} backtest:{}", exchangeName, currencyName, tradeName,
-				backtest);
+	public void initialize(String exchangeName, String currencyName, String tradeName) {
+		log.debug("start. exchange: {} tradeName: {} currency: {}", exchangeName, currencyName, tradeName);
 
 		this.currencyName = currencyName;
 		feePercentage = jsonFiles.getExchangesJsonMap().get(exchangeName).getFee();
 		this.currencyTradingRecord = new BaseTradingRecord();
-		this.backtest = backtest;
 
 		jsonFiles.getExchangesJsonMap().get(exchangeName).getTradeConfigsMap().get(tradeName).getStrategies()
 				.forEach(tradeStrategy -> {
@@ -127,14 +124,8 @@ public class ExchangeTradeCurrency {
 		}
 
 		if (currencyOrderType == OrderType.BUY) {
-			// first trade of the backtest
-			if (balance.stripTrailingZeros().equals(BigDecimal.ZERO) && backtest) {
-				balance = BigDecimal.valueOf(100);
-				exchangeBalance = balance;
-			} else {
-				balance = exchangeBalance;
-			}
 
+			balance = exchangeBalance;
 			feeValue = NumericFunctions.percentage(feePercentage, balance, false);
 			// available balance to be used in the buy
 			balance = NumericFunctions.subtract(balance, feeValue, NumericFunctions.BALANCE_SCALE);
@@ -169,9 +160,11 @@ public class ExchangeTradeCurrency {
 			String strategyName) {
 
 		if (orderType == AbstractStrategy.ENTER) {
-			currencyTradingRecord.enter(tradingRecordEndIndex++, Decimal.valueOf(closePrice), Decimal.valueOf(amount));
+			currencyTradingRecord.enter(tradingRecordEndIndex++, PrecisionNum.valueOf(closePrice),
+					PrecisionNum.valueOf(amount));
 		} else {
-			currencyTradingRecord.exit(tradingRecordEndIndex++, Decimal.valueOf(closePrice), Decimal.valueOf(amount));
+			currencyTradingRecord.exit(tradingRecordEndIndex++, PrecisionNum.valueOf(closePrice),
+					PrecisionNum.valueOf(amount));
 		}
 
 		log.debug("{} -> strategy {} currency: {} price: {} index c: {}",
@@ -196,7 +189,6 @@ public class ExchangeTradeCurrency {
 			BigDecimal exchangeAmount, OrderType exchangeLastOrderType) {
 
 		lowestBar = 0;
-		strategyResult = StrategyResult.builder().build();
 		this.exchangeAmount = exchangeAmount;
 		this.exchangeBalance = exchangeBalance;
 
@@ -205,6 +197,8 @@ public class ExchangeTradeCurrency {
 				currencyName, balance, amount, exchangeBalance, exchangeAmount);
 
 		calculateBalanceAndAmount(tradeEntity, exchangeBalance, exchangeAmount);
+
+		strategyResult = StrategyResult.builder().balance(balance).amount(amount).build();
 
 		strategiesMap.values().forEach(strategy -> {
 			try {

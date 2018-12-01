@@ -58,11 +58,6 @@ public class GdaxTrading extends AbstractExchangeTrading {
 		log.debug("done");
 	}
 
-	public void processTradeHistory(Optional<ZonedDateTime> startPeriod, Optional<ZonedDateTime> endPeriod)
-			throws ExchangeException {
-		gdaxHistoryTrades.processTradeHistory(startPeriod, endPeriod);
-	}
-
 	private void startTrade() throws ExchangeException {
 		log.debug("start");
 
@@ -76,6 +71,7 @@ public class GdaxTrading extends AbstractExchangeTrading {
 			streamingExchange = StreamingExchangeFactory.INSTANCE.createExchange(GDAXStreamingExchange.class.getName());
 			streamingExchange.connect(productSubscription).blockingAwait();
 
+			log.debug("starting processing live trade");
 			processingLiveTrades = true;
 
 			try {
@@ -143,5 +139,11 @@ public class GdaxTrading extends AbstractExchangeTrading {
 		}
 
 		log.debug("done");
+	}
+
+	@Override
+	public void processTradeHistory(Optional<ZonedDateTime> startPeriod, Optional<ZonedDateTime> endPeriod)
+			throws ExchangeException {
+		gdaxHistoryTrades.processTradeHistory(startPeriod, endPeriod);
 	}
 }

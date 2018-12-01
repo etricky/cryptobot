@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
-import org.ta4j.core.Decimal;
+import org.ta4j.core.num.Num;
 
 public class NumericFunctions {
 	public static final int PERCENTAGE_SCALE = 2;
@@ -16,12 +16,16 @@ public class NumericFunctions {
 	public static final BigDecimal _100 = BigDecimal.valueOf(100);
 	private static final MathContext MC_PER = new MathContext(4, ROUNDING_MODE);
 
-	public static BigDecimal convertToBigDecimal(Decimal value) {
+	public static BigDecimal convertToBigDecimal(Num value) {
 		return BigDecimal.valueOf(value.doubleValue());
 	}
 
-	public static BigDecimal convertToBigDecimal(Decimal value, int decimalPart) {
+	public static BigDecimal convertToBigDecimal(Num value, int decimalPart) {
 		return BigDecimal.valueOf(value.doubleValue()).setScale(decimalPart, ROUNDING_MODE);
+	}
+
+	public static BigDecimal percentage(BigDecimal value, BigDecimal baseValue) {
+		return percentage(value, baseValue, false);
 	}
 
 	public static BigDecimal percentage(BigDecimal value, BigDecimal baseValue, boolean delta) {

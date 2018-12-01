@@ -6,8 +6,8 @@ import java.time.ZonedDateTime;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.ta4j.core.BaseBar;
-import org.ta4j.core.Decimal;
 import org.ta4j.core.TimeSeries;
+import org.ta4j.core.num.PrecisionNum;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
@@ -59,9 +59,11 @@ public class TimeSeriesHelper {
 
 						cachedBar = new BaseBar(Duration.ofSeconds(barDuration),
 								calculateBarEndTime(tradeEntity, barDuration),
-								Decimal.valueOf(tradeEntity.getOpenPrice()),
-								Decimal.valueOf(tradeEntity.getHighPrice()), Decimal.valueOf(tradeEntity.getLowPrice()),
-								Decimal.valueOf(tradeEntity.getClosePrice()), Decimal.ONE);
+								PrecisionNum.valueOf(tradeEntity.getOpenPrice()),
+								PrecisionNum.valueOf(tradeEntity.getHighPrice()),
+								PrecisionNum.valueOf(tradeEntity.getLowPrice()),
+								PrecisionNum.valueOf(tradeEntity.getClosePrice()), PrecisionNum.valueOf(1),
+								PrecisionNum.valueOf(100));
 
 						log.trace("created new cached bar. endTime: {}",
 								DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
@@ -72,7 +74,7 @@ public class TimeSeriesHelper {
 						log.trace("adding trade in cached bar. endTime: {}",
 								DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
 
-						cachedBar.addTrade(Decimal.ONE, Decimal.valueOf(tradeEntity.getClosePrice()));
+						cachedBar.addTrade(PrecisionNum.valueOf(1), PrecisionNum.valueOf(tradeEntity.getClosePrice()));
 
 					} else {
 						log.trace("adding cached bar to timeseries {}", timeSeries.getName());
@@ -82,9 +84,11 @@ public class TimeSeriesHelper {
 
 						cachedBar = new BaseBar(Duration.ofSeconds(barDuration),
 								calculateBarEndTime(tradeEntity, barDuration),
-								Decimal.valueOf(tradeEntity.getOpenPrice()),
-								Decimal.valueOf(tradeEntity.getHighPrice()), Decimal.valueOf(tradeEntity.getLowPrice()),
-								Decimal.valueOf(tradeEntity.getClosePrice()), Decimal.ONE);
+								PrecisionNum.valueOf(tradeEntity.getOpenPrice()),
+								PrecisionNum.valueOf(tradeEntity.getHighPrice()),
+								PrecisionNum.valueOf(tradeEntity.getLowPrice()),
+								PrecisionNum.valueOf(tradeEntity.getClosePrice()), PrecisionNum.valueOf(1),
+								PrecisionNum.valueOf(1));
 
 						log.trace("created new cached bar. endTime: {}",
 								DateFunctions.getStringFromZDT(cachedBar.getEndTime()));
@@ -93,9 +97,11 @@ public class TimeSeriesHelper {
 					// a trade is created every 60s so it should be added to the timeSeries
 					BaseBar bar = new BaseBar(Duration.ofSeconds(barDuration),
 							tradeEntity.getTimestamp().plusSeconds(barDuration),
-							Decimal.valueOf(tradeEntity.getOpenPrice()), Decimal.valueOf(tradeEntity.getHighPrice()),
-							Decimal.valueOf(tradeEntity.getLowPrice()), Decimal.valueOf(tradeEntity.getClosePrice()),
-							Decimal.ONE);
+							PrecisionNum.valueOf(tradeEntity.getOpenPrice()),
+							PrecisionNum.valueOf(tradeEntity.getHighPrice()),
+							PrecisionNum.valueOf(tradeEntity.getLowPrice()),
+							PrecisionNum.valueOf(tradeEntity.getClosePrice()), PrecisionNum.valueOf(1),
+							PrecisionNum.valueOf(1));
 
 					timeSeries.addBar(bar);
 					barAdded = true;

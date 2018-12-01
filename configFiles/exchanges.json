@@ -76,6 +76,17 @@
                 ]
             },
             {
+                "tradeName": "BTC_EUR_DAILY",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyDaily",
+                        "currencyPairs": [
+                            "BTC_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
                 "tradeName": "BTC_EUR_B2",
                 "strategies": [
                     {
@@ -257,6 +268,17 @@
                 ]
             },
             {
+                "tradeName": "LTC_EUR_T2",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyCustom",
+                        "currencyPairs": [
+                            "LTC_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
                 "tradeName": "LTC_EUR_B",
                 "strategies": [
                     {
@@ -267,6 +289,23 @@
                     },
                     {
                         "strategyName": "stopLossStrategy",
+                        "currencyPairs": [
+                            "LTC_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "LTC_EUR_BC",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategy",
+                        "currencyPairs": [
+                            "LTC_EUR"
+                        ]
+                    },
+                    {
+                        "strategyName": "stopLossStrategy2",
                         "currencyPairs": [
                             "LTC_EUR"
                         ]
@@ -296,8 +335,21 @@
                     {
                         "strategyName": "tradingStrategy",
                         "currencyPairs": [
-                            "LTC_EUR", 
-                            "BTC_EUR", 
+                            "LTC_EUR",
+                            "BTC_EUR",
+                            "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "ALL_TRADES_T2",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategy",
+                        "currencyPairs": [
+                            "LTC_EUR",
+                            "BTC_EUR",
                             "ETH_EUR"
                         ]
                     }
@@ -351,7 +403,7 @@
                     {
                         "strategyName": "tradingStrategy",
                         "currencyPairs": [
-                            "BTC_EUR", 
+                            "BTC_EUR",
                             "LTC_EUR"
                         ]
                     },
@@ -369,21 +421,20 @@
                     {
                         "strategyName": "stopLossStrategy",
                         "currencyPairs": [
-                            "BTC_EUR",
-                            "ETH_EUR"
+                            "BTC_EUR"
                         ]
                     },
                     {
                         "strategyName": "tradingStrategy",
                         "currencyPairs": [
-                            "BTC_EUR", 
-                            "LTC_EUR"
+                            "BTC_EUR"
                         ]
                     },
                     {
                         "strategyName": "tradingStrategyCustom",
                         "currencyPairs": [
-                            "ETH_EUR"
+                            "ETH_EUR",
+                            "LTC_EUR"
                         ]
                     }
                 ]

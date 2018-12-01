@@ -1,8 +1,12 @@
 package com.etricky.cryptobot.core.exchanges.bitstamp.trading;
 
+import java.time.ZonedDateTime;
+import java.util.Optional;
+
 import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeTrading;
+import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.Commands;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
@@ -38,5 +42,12 @@ public class BitstampTrading extends AbstractExchangeTrading {
 		}
 
 		log.debug("done");
+	}
+
+	@Override
+	public void processTradeHistory(Optional<ZonedDateTime> startPeriod, Optional<ZonedDateTime> endPeriod)
+			throws ExchangeException {
+		// TODO Auto-generated method stub
+
 	}
 }

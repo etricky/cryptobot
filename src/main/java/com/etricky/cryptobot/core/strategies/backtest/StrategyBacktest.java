@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,38 +74,55 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 
 	private String tradeName, currencyName;
 	private final String TRADE_KEY = "trade_key";
-	private long startDateUnixTime, endDateUnixTime, backtestStart;
+	private long startDateUnixTime, endDateUnixTime, backtestStart, strategyInitialPeriod = 0;
 	private long counter, backtestResultsIndex = 0;
 	private ZonedDateTime startDate, endDate;
 
-	public void initialize(ExchangeEnum exchangeEnum, String tradeName, long historyDays, ZonedDateTime startDate,
+	public void initialize(ExchangeEnum exchangeEnum, String tradeName, ZonedDateTime startDate,
 			ZonedDateTime endDate) {
-		long auxHistoryDays;
 
-		log.debug("start. exchangeEnum: {} tradeName: {} historyDays: {} startDate: {} endDate: {}", exchangeEnum,
-				tradeName, historyDays, startDate, endDate);
+		log.debug("start. exchangeEnum: {} tradeName: {}  startDate: {} endDate: {}", exchangeEnum, tradeName,
+				startDate, endDate);
 
 		this.exchangeEnum = exchangeEnum;
 		this.tradeName = tradeName;
 
-		if (startDate == null) {
-			if (historyDays == 0) {
-				auxHistoryDays = jsonFiles.getExchangesJsonMap().get(exchangeEnum.getName()).getTradeHistoryDays()
-						* 86400;
-			} else {
-				auxHistoryDays = historyDays * 86400;
-			}
-			startDateUnixTime = DateFunctions.getUnixTimeNow() - auxHistoryDays;
-			endDateUnixTime = DateFunctions.getUnixTimeNow();
-		} else {
-			startDateUnixTime = DateFunctions.getUnixTimeFromZDT(startDate);
-			endDateUnixTime = DateFunctions.getUnixTimeFromZDT(endDate);
-		}
+		jsonFiles.getExchangesJsonMap().get(exchangeEnum.getName()).getTradeConfigsMap().get(tradeName).getStrategies()
+				.forEach(tradeStrategy -> {
+					if (jsonFiles.getStrategiesJsonMap().containsKey(tradeStrategy.getStrategyName())) {
+						if (strategyInitialPeriod == 0 || strategyInitialPeriod < jsonFiles.getStrategiesJsonMap()
+								.get(tradeStrategy.getStrategyName()).getInitialPeriod())
+							strategyInitialPeriod = jsonFiles.getStrategiesJsonMap()
+									.get(tradeStrategy.getStrategyName()).getInitialPeriod();
+					}
+				});
 
-		this.startDate = DateFunctions.getZDTfromUnixTime(startDateUnixTime);
-		this.endDate = DateFunctions.getZDTfromUnixTime(endDateUnixTime);
+		log.debug("strategyInitialPeriod: {}", strategyInitialPeriod);
 
-		log.debug("done");
+		this.startDate = startDate.minusSeconds(strategyInitialPeriod);
+		this.endDate = endDate;
+		startDateUnixTime = DateFunctions.getUnixTimeFromZDT(this.startDate);
+		endDateUnixTime = DateFunctions.getUnixTimeFromZDT(this.endDate);
+
+		log.debug("done. startDate: {}/{} endDate: {}/{}", this.startDate, startDateUnixTime, this.endDate,
+				endDateUnixTime);
+	}
+
+	/**
+	 * Private static method to avoid that multiple trades for the same currency
+	 * process the trade history
+	 * 
+	 * @param abstractExchangeTrading Exchange trading object that has the method to
+	 *                                process the history trade
+	 * @param startDate               Initial date of the trade history period to be
+	 *                                processed
+	 * @param endDate                 Final date of the trade history period to be
+	 *                                processed
+	 * @throws ExchangeException
+	 */
+	private synchronized static void processTradeHistory(AbstractExchangeTrading abstractExchangeTrading,
+			ZonedDateTime startDate, ZonedDateTime endDate) throws ExchangeException {
+		abstractExchangeTrading.processTradeHistory(Optional.of(startDate), Optional.of(endDate));
 	}
 
 	private void setExchangeTrade() {
@@ -127,15 +145,17 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 		tradeCurrencies.forEach(currencyPair -> {
 			CurrencyEnum currencyEnum = CurrencyEnum.getInstanceByShortName(currencyPair).get();
 
-			// gets a new exchange trading bean
-			AbstractExchangeTrading abstractExchangeTrading = (AbstractExchangeTrading) appContext
-					.getBean(exchangeEnum.getTradingBean());
-
-			abstractExchangeTrading.initialize(exchangeEnum, currencyEnum, new ThreadInfo("backtest"));
-
-			log.debug("create exchange trading bean for currencyPair: {}", currencyPair);
-
 			try {
+				// gets a new exchange trading bean
+				AbstractExchangeTrading abstractExchangeTrading = (AbstractExchangeTrading) appContext
+						.getBean(exchangeEnum.getTradingBean());
+
+				abstractExchangeTrading.initialize(exchangeEnum, currencyEnum, new ThreadInfo("backtest"));
+
+				StrategyBacktest.processTradeHistory(abstractExchangeTrading, startDate, endDate);
+
+				log.debug("create exchange trading bean for currencyPair: {}", currencyPair);
+
 				exchangeTrade.addExchangeTrading(currencyEnum, abstractExchangeTrading);
 			} catch (ExchangeException e) {
 				log.error("Exception: {}", e);
@@ -184,6 +204,7 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 
 		dbTradeEntityMap.values().forEach(tradeList -> {
 			tradeList.forEach(trade -> {
+
 				StrategyResult[] strategyResult = exchangeTrade.evaluateTrade(trade);
 
 				if (strategyResult[ExchangeTrade.TRADE] != null
@@ -223,7 +244,9 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 				.build();
 
 		backtestResultsMap.put(key, BacktestResultsEntity.builder().backtestId(backtestPK).tradeStart(startDate)
-				.tradeEnd(endDate).currency(orderInfo.getStrategyResult().getTradeEntity().getTradeId().getCurrency())
+				.tradeEnd(endDate)
+				.currency(key.equals(TRADE_KEY) ? tradeName
+						: orderInfo.getStrategyResult().getTradeEntity().getTradeId().getCurrency())
 				.initialBalance(backtestMetaData.getFirstOrderBalance())
 				.initialAmount(backtestMetaData.getFirstOrderAmount())
 				.initialPrice(backtestMetaData.getFirstOrderPrice())
@@ -240,7 +263,10 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 				.negAmountOrders(backtestMetaData.getNegAmountOrders()).totalOrders(backtestMetaData.getTotalOrders())
 				.currencyOrders(backtestMetaData.getCurrencyOrders()).tradingBuys(backtestMetaData.getTradingBuys())
 				.tradingSells(backtestMetaData.getTradingSells()).stopLossBuys(backtestMetaData.getStopLossBuys())
-				.stopLossSells(backtestMetaData.getStopLossSells()).totalFees(backtestMetaData.getTotalFees()).build());
+				.stopLossSells(backtestMetaData.getStopLossSells()).totalFees(backtestMetaData.getTotalFees())
+				.multiCurrency(jsonFiles.getExchangesJsonMap().get(exchangeEnum.getName()).getTradeConfigsMap()
+						.get(tradeName).getCurrencyPairs().size() > 1)
+				.build());
 
 		backtestResultsMetaDataMap.put(key, backtestMetaData);
 	}

@@ -1,11 +1,12 @@
 package com.etricky.cryptobot.core.strategies.rules;
 
-import org.ta4j.core.Decimal;
 import org.ta4j.core.Rule;
 import org.ta4j.core.TradingRecord;
 import org.ta4j.core.indicators.DoubleEMAIndicator;
 import org.ta4j.core.indicators.TripleEMAIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
+import org.ta4j.core.num.Num;
+import org.ta4j.core.num.PrecisionNum;
 import org.ta4j.core.trading.rules.AbstractRule;
 import org.ta4j.core.trading.rules.CrossedUpIndicatorRule;
 
@@ -22,13 +23,13 @@ public class TradingEntryRule extends AbstractRule {
 	private AbstractStrategy abstractStrategy;
 
 	private ClosePriceIndicator closePriceIndicator;
-	private Decimal lossPercentage1;
-	// private Decimal lossPercentage2;
-	// private Decimal lossPercentage3;
+	private Num lossPercentage1;
+	// private Num lossPercentage2;
+	// private Num lossPercentage3;
 
-	// private Decimal gainPercentage1;
-	// private Decimal gainPercentage2;
-	// private Decimal gainPercentage3;
+	// private Num gainPercentage1;
+	// private Num gainPercentage2;
+	// private Num gainPercentage3;
 
 	private StrategiesJson strategiesSettings;
 	private Rule entryRule;
@@ -38,17 +39,18 @@ public class TradingEntryRule extends AbstractRule {
 		this.closePriceIndicator = closePriceIndicator;
 
 		// this.gainPercentage1 =
-		// Decimal.valueOf(strategiesSettings.getEntryGainPercentage1()).dividedBy(100);
+		// PrecisionNum.valueOf(strategiesSettings.getEntryGainPercentage1()).dividedBy(100);
 		// this.gainPercentage2 =
-		// Decimal.valueOf(strategiesSettings.getEntryGainPercentage2()).dividedBy(100);
+		// PrecisionNum.valueOf(strategiesSettings.getEntryGainPercentage2()).dividedBy(100);
 		// this.gainPercentage3 =
-		// Decimal.valueOf(strategiesSettings.getEntryGainPercentage3()).dividedBy(100);
+		// PrecisionNum.valueOf(strategiesSettings.getEntryGainPercentage3()).dividedBy(100);
 
-		this.lossPercentage1 = Decimal.valueOf(strategiesSettings.getEntryLossPercentage1()).dividedBy(100);
+		this.lossPercentage1 = PrecisionNum.valueOf(strategiesSettings.getEntryLossPercentage1())
+				.dividedBy(PrecisionNum.valueOf(100));
 		// this.lossPercentage2 =
-		// Decimal.valueOf(strategiesSettings.getEntryLossPercentage2()).dividedBy(100);
+		// PrecisionNum.valueOf(strategiesSettings.getEntryLossPercentage2()).dividedBy(100);
 		// this.lossPercentage3 =
-		// Decimal.valueOf(strategiesSettings.getEntryLossPercentage3()).dividedBy(100);
+		// PrecisionNum.valueOf(strategiesSettings.getEntryLossPercentage3()).dividedBy(100);
 
 		this.strategiesSettings = strategiesSettings;
 		entryRule = new CrossedUpIndicatorRule(tema, dema);
@@ -59,7 +61,7 @@ public class TradingEntryRule extends AbstractRule {
 	@Override
 	public boolean isSatisfied(int index, TradingRecord tradingRecord) {
 		boolean result = false;
-		Decimal closePrice, rule10, deltaPrice;
+		Num closePrice, rule10, deltaPrice;
 
 		if (strategiesSettings.getEntryEnabled()) {
 			log.trace("start. index: {}", index);
@@ -67,13 +69,13 @@ public class TradingEntryRule extends AbstractRule {
 			if (tradingRecord.getCurrentTrade().isNew()) {
 
 				closePrice = closePriceIndicator.getValue(index);
-				deltaPrice = closePrice.minus(
-						tradingRecord.getLastOrder() == null ? Decimal.ZERO : tradingRecord.getLastOrder().getPrice());
+				deltaPrice = closePrice.minus(tradingRecord.getLastOrder() == null ? PrecisionNum.valueOf(0)
+						: tradingRecord.getLastOrder().getPrice());
 				rule10 = deltaPrice.dividedBy(closePrice);
 
-				// crossUp && (deltaPrice < 0 OR deltaPrice >= gainPercentage)
-				if (entryRule.isSatisfied(index, tradingRecord)
-						&& (rule10.isLessThan(Decimal.ZERO) || rule10.isGreaterThanOrEqual(lossPercentage1))) {
+				// crossUp && (deltaPrice < 0 OR deltaPrice >= lossPercentage1)
+				if (entryRule.isSatisfied(index, tradingRecord) && (rule10.isLessThan(PrecisionNum.valueOf(0))
+						|| rule10.isGreaterThanOrEqual(lossPercentage1))) {
 					result = true;
 				}
 

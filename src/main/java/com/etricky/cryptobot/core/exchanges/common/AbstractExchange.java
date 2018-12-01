@@ -65,7 +65,7 @@ public abstract class AbstractExchange implements UncaughtExceptionHandler {
 		log.error("start. exception on thread:{}", t.getName());
 		log.error("exception: {}", e);
 
-		commands.sendMessage("Exception " + e.getMessage() + " occurred on " + t.getName() + ". Stopping thread", true);
+		commands.sendMessage("Exception " + e.toString() + " occurred on " + t.getName() + ". Stopping thread", true);
 
 		// sends the interrupt to itself
 		if (t.isAlive() || !t.isInterrupted()) {

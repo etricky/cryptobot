@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.knowm.xchange.gdax.dto.marketdata.GDAXCandle;
-import org.knowm.xchange.gdax.service.GDAXMarketDataService;
+import org.knowm.xchange.coinbasepro.dto.marketdata.CoinbaseProCandle;
+import org.knowm.xchange.coinbasepro.service.CoinbaseProMarketDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -48,7 +48,8 @@ public class GdaxHistoryTrades {
 	GdaxAccount gdaxAccount;
 
 	private GdaxTrading gdaxTrading;
-	private GDAXMarketDataService mds = null;
+	private CoinbaseProMarketDataService mds = null;
+	private int recursiveCounter = 0;
 
 	public void setGdaxTrading(GdaxTrading gdaxTrading) {
 		this.gdaxTrading = gdaxTrading;
@@ -122,19 +123,28 @@ public class GdaxHistoryTrades {
 							DateFunctions.getStringFromUnixTime(tradeGapPeriod.getEnd()));
 					// clears the variable
 					lastTradeEntity = null;
-					List<GdaxTradePeriod> tradePeriods = getGdaxTradePeriods(tradeGapPeriod.getStart(),
+
+					List<GdaxTradePeriod> gdaxTradePeriods = getGdaxTradePeriods(tradeGapPeriod.getStart(),
 							tradeGapPeriod.getEnd());
 
 					try {
 
-						for (GdaxTradePeriod gdaxTradePeriod : tradePeriods) {
+						for (GdaxTradePeriod gdaxTradePeriod : gdaxTradePeriods) {
 							exchangeLock.getLock(gdaxTrading.getExchangeEnum().getName());
 
 							// besides ensuring that gdax rate limit is not reached, it also allows to stop
 							// the thread if it's interrupted
 							Thread.sleep(1000);
 
-							// Gdax returns the newest trade first
+							// getGdaxHistoryTrades calls itself if gdax returns more results than requested
+							// due to synchronization issues caused by different time (gdax behind current
+							// time which result in gdax returning all trades from the past hour). To avoid
+							// an infinite loop, this counter must be set to 0 before getGdaxHistoryTrades
+							// can be invoked
+							recursiveCounter = 0;
+
+							// Gdax returns the newest trade first and the trades for the interval
+							// [start,end[
 							gdaxTrades = getGdaxHistoryTrades(gdaxTradePeriod.getStart(), gdaxTradePeriod.getEnd());
 
 							exchangeLock.releaseLock(gdaxTrading.getExchangeEnum().getName());
@@ -171,7 +181,7 @@ public class GdaxHistoryTrades {
 								// verifies if first trade return by gdax matches the start period of the gap
 								if (gdaxTradePeriod.getStart() != gdaxTrades.get(0).getTradeId().getUnixtime()
 										.longValue()) {
-									log.trace("initial {} trades of are missing from gdax",
+									log.debug("initial {} trades of are missing from gdax",
 											(gdaxTrades.get(0).getTradeId().getUnixtime() - gdaxTradePeriod.getStart())
 													/ 60);
 
@@ -205,7 +215,7 @@ public class GdaxHistoryTrades {
 										while (lastTradeEntity.getTradeId().getUnixtime()
 												.longValue() != gdaxTrade.getTradeId().getUnixtime().longValue() - 60) {
 
-											log.trace("missing trade. current: {} last: {} #: {}",
+											log.debug("missing trade. current: {} last: {} #: {}",
 													gdaxTrade.getTradeId().getUnixtime(),
 													lastTradeEntity.getTradeId().getUnixtime(),
 													(gdaxTrade.getTradeId().getUnixtime()
@@ -225,10 +235,10 @@ public class GdaxHistoryTrades {
 									lastTradeEntity = gdaxTrade;
 								}
 
-								// verifies if last trade return by gdax matches the end period of the gap
+								// verifies if last trade returned by gdax matches the end period of the gap
 								if (gdaxTradePeriod.getEnd() - 60 != lastTradeEntity.getTradeId().getUnixtime()
 										.longValue()) {
-									log.trace("final {} trades of are missing from gdax",
+									log.debug("final {} trades of are missing from gdax",
 											(gdaxTradePeriod.getEnd() - 60 - lastTradeEntity.getTradeId().getUnixtime())
 													/ 60);
 
@@ -276,25 +286,29 @@ public class GdaxHistoryTrades {
 
 			log.debug("loading timeSeries with trades");
 
-			tradesEntityList = tradesData.getTradesInPeriod(gdaxTrading.getExchangeEnum().getName(),
-					gdaxTrading.getCurrencyEnum().getShortName(), auxStartPeriod, auxEndPeriod,
-					jsonFiles.getExchangesJsonMap().get(gdaxTrading.getExchangeEnum().getName()).getAllowFakeTrades());
+			if (!gdaxTrading.isHistoryOnlyTrade()) {
+				tradesEntityList = tradesData.getTradesInPeriod(gdaxTrading.getExchangeEnum().getName(),
+						gdaxTrading.getCurrencyEnum().getShortName(), auxStartPeriod, auxEndPeriod,
+						jsonFiles.getExchangesJsonMap().get(gdaxTrading.getExchangeEnum().getName())
+								.getAllowFakeTrades());
 
-			tradesEntityList.forEach(trade -> {
-				gdaxTrading.notifyListeners(trade, false);
-			});
+				tradesEntityList.forEach(trade -> {
+					gdaxTrading.notifyListeners(trade, false);
+				});
+			}
 
 			tradesEntityList.clear();
 			fakeTradesCounter = 0;
 
 			log.debug("now: {} endPeriod: {}", DateFunctions.getUnixTimeNowToEvenMinute(), auxEndPeriod);
-		} while (DateFunctions.getUnixTimeNowToEvenMinute() - auxEndPeriod > 60);
+		} while (DateFunctions.getUnixTimeNowToEvenMinute() - auxEndPeriod > 60 && !endPeriod.isPresent());
 
 		log.debug("done");
 
 	}
 
-	private List<TradeEntity> getGdaxHistoryTrades(long startPeriod, long endPeriod) throws IOException {
+	private List<TradeEntity> getGdaxHistoryTrades(long startPeriod, long endPeriod)
+			throws IOException, InterruptedException, ExchangeException {
 		log.debug("start. startPeriod: {}/{} endPeriod: {}/{}", startPeriod,
 				DateFunctions.getStringFromUnixTime(startPeriod), endPeriod,
 				DateFunctions.getStringFromUnixTime(endPeriod));
@@ -302,28 +316,39 @@ public class GdaxHistoryTrades {
 		String startPeriodString = DateFunctions.getStringFromUnixTime(startPeriod, DateFunctions.DATE_FORMAT_EXCHANGE);
 		String endPeriodString = DateFunctions.getStringFromUnixTime(endPeriod, DateFunctions.DATE_FORMAT_EXCHANGE);
 
-		mds = (GDAXMarketDataService) gdaxAccount.getExchange().getMarketDataService();
+		mds = (CoinbaseProMarketDataService) gdaxAccount.getExchange().getMarketDataService();
 
-		GDAXCandle[] candles = mds.getGDAXHistoricalCandles(gdaxTrading.getCurrencyEnum().getCurrencyPair(),
-				startPeriodString, endPeriodString, "60");
+		CoinbaseProCandle[] candles = mds.getCoinbaseProHistoricalCandles(
+				gdaxTrading.getCurrencyEnum().getCurrencyPair(), startPeriodString, endPeriodString, "60");
 
 		List<TradeEntity> tradeList = Arrays.asList(candles).stream().map(c -> mapGDAXCandle(c))
 				.collect(Collectors.toList());
 
 		log.debug("done. # of trades returned: {} asked: {}", tradeList.size(), (endPeriod - startPeriod) / 60);
 
+		if (tradeList.size() > (endPeriod - startPeriod) / 60) {
+			log.warn("gdax returned more trades than asked!");
+			if (recursiveCounter < 2) {
+				Thread.sleep(5000);
+				tradeList = getGdaxHistoryTrades(startPeriod, endPeriod);
+				recursiveCounter++;
+			} else {
+				log.error("Invalid results from gdax");
+				throw new ExchangeException("Invalid results from gdax");
+			}
+		}
+
 		return tradeList;
 	}
 
-	private TradeEntity mapGDAXCandle(GDAXCandle candle) {
-		log.trace("start candle: {}", candle);
+	private TradeEntity mapGDAXCandle(CoinbaseProCandle c) {
+		log.trace("start candle: {}", c);
 
-		TradeEntity tradeEntity = TradeEntity.builder().openPrice(candle.getOpen()).closePrice(candle.getClose())
-				.lowPrice(candle.getLow()).highPrice(candle.getHigh())
-				.timestamp(DateFunctions.getZDTFromDate(candle.getTime()))
+		TradeEntity tradeEntity = TradeEntity.builder().openPrice(c.getOpen()).closePrice(c.getClose())
+				.lowPrice(c.getLow()).highPrice(c.getHigh()).timestamp(DateFunctions.getZDTFromDate(c.getTime()))
 				.tradeId(ExchangePK.builder().currency(gdaxTrading.getCurrencyEnum().getShortName())
 						.exchange(gdaxTrading.getExchangeEnum().getName())
-						.unixtime(DateFunctions.getUnixTimeFromdDate(candle.getTime())).build())
+						.unixtime(DateFunctions.getUnixTimeFromdDate(c.getTime())).build())
 				.build();
 
 		log.trace("done. tradeEntity: {}", tradeEntity);

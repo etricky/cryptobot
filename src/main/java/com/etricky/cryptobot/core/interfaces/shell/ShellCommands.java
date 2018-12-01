@@ -25,7 +25,8 @@ public class ShellCommands implements Quit.Command {
 
 	public enum ShellCommandsEnum {
 		START("start", "s"), BACKTEST("backtest", "bt"), STOP("stop", "st"), LIST("list", "l"), QUIT("quit", "q"),
-		HELP("help", null), STACKTRACE("stacktrace", null), RELOADFCONFIGS("reload", "rl"), WALLET("wallet", "w");
+		HELP("help", null), STACKTRACE("stacktrace", null), RELOADFCONFIGS("reload", "rl"), WALLET("wallet", "w"),
+		BACKFILL("backfill", "b");
 
 		public String command;
 		public String shortCommand;
@@ -114,6 +115,12 @@ public class ShellCommands implements Quit.Command {
 				log.debug("command matched: {}", ShellCommandsEnum.WALLET.command);
 				execute = true;
 
+			} else if (arguments[0].equalsIgnoreCase(ShellCommandsEnum.BACKFILL.command)
+					|| arguments[0].equalsIgnoreCase(ShellCommandsEnum.BACKFILL.shortCommand)) {
+
+				log.debug("command matched: {}", ShellCommandsEnum.BACKFILL.command);
+				execute = true;
+
 			} else if (arguments[0].equalsIgnoreCase(ShellCommandsEnum.HELP.command)) {
 
 				log.debug("command matched: {}", ShellCommandsEnum.HELP.command);
@@ -189,6 +196,16 @@ public class ShellCommands implements Quit.Command {
 				historyDays, startDate, endDate);
 
 		commands.backtest(exchange, tradeName, historyDays, startDate, endDate);
+
+		log.debug("done");
+	}
+
+	@ShellMethod(value = "Backfills trade history", key = { "backfill", "b" })
+	public void backfill(String exchange) {
+
+		log.debug("start. exchange: {}", exchange);
+
+		commands.backFill(exchange.toUpperCase());
 
 		log.debug("done");
 	}

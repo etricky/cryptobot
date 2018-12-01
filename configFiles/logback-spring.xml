@@ -15,7 +15,7 @@
 		<file>${LOG_FILE}.log</file>
 		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
 			<fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-			<maxFileSize>100MB</maxFileSize>
+			<maxFileSize>200MB</maxFileSize>
 			<maxHistory>10</maxHistory>
 		</rollingPolicy>
 	</appender>
@@ -36,9 +36,9 @@
 <!-- 		<appender-ref ref="CONSOLE" /> -->
 	</logger>
 	
-	<logger name="com.etricky.cryptobot.core.strategies.common.TimeSeriesHelper" level="DEBUG" additivity="false">
+	<logger name="com.etricky.cryptobot.core.strategies.common.AbstractStrategy" level="TRACE" additivity="false">
 		<appender-ref ref="FILE" />
-		<appender-ref ref="CONSOLE" />
+<!--		<appender-ref ref="CONSOLE" />-->
 	</logger>
 
 	<root level="ERROR">

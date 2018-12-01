@@ -58,8 +58,8 @@ public class Commands {
 			reloadConfigs();
 			if (validateTrade(_exchange, Optional.of(_tradeName))) {
 				sendMessage("Starting trade for exchange: " + _exchange + " tradeName: " + _tradeName, true);
-				if (tradeType < AbstractExchangeTrading.TRADE_FULL
-						|| tradeType > AbstractExchangeTrading.TRADE_DRY_RUN) {
+				if (tradeType < AbstractExchangeTrading.TRADE_TYPE_FULL
+						|| tradeType > AbstractExchangeTrading.TRADE_TYPE_DRY_RUN) {
 					sendMessage("Trade type must be 0 - All, 1 - History or 2 - Live", true);
 				} else {
 					int result = exchangeThreads.startExchangeTradingThread(_exchange, _tradeName, tradeType);
@@ -76,9 +76,31 @@ public class Commands {
 		log.debug("done");
 	}
 
+	public void backFill(String exchange) {
+		log.debug("start. exchange: {}", exchange);
+		try {
+			reloadConfigs();
+
+			if (validateTrade(exchange, Optional.empty())) {
+				ExchangeJson exchangeJson = jsonFiles.getExchangesJsonMap().get(exchange);
+
+				exchangeJson.getTradeConfigsMap().values().forEach(tradeConfigs -> {
+					exchangeThreads.startExchangeTradingThread(exchange, tradeConfigs.getTradeName(),
+							AbstractExchangeTrading.TRADE_TYPE_HISTORY_ONLY);
+				});
+			}
+
+		} catch (Exception e) {
+			exceptionHandler(e);
+		}
+
+		log.debug("done");
+	}
+
 	private void executeBacktest(String exchange, String tradeName, int historyDays, String startDate, String endDate)
 			throws ExchangeException {
 		ZonedDateTime _startDate = null, _endDate = null;
+		int auxHistoryDays = 0;
 		validCommand = validateTrade(exchange, Optional.of(tradeName));
 
 		if (validCommand && historyDays < 0) {
@@ -86,24 +108,30 @@ public class Commands {
 			validCommand = false;
 		}
 
-		if (validCommand && historyDays == 0) {
-			try {
-				_startDate = DateFunctions.getZDTfromStringDate(startDate);
-			} catch (ParseException e) {
-				sendMessage("Start date must be on format yyyy-mm-dd", true);
-				validCommand = false;
-			}
+		if (validCommand) {
+			if (historyDays == 0) {
+				try {
+					_startDate = DateFunctions.getZDTfromStringDate(startDate);
+				} catch (ParseException e) {
+					sendMessage("Start date must be on format yyyy-mm-dd", true);
+					validCommand = false;
+				}
 
-			try {
-				_endDate = DateFunctions.getZDTfromStringDate(endDate);
-			} catch (ParseException e) {
-				sendMessage("End date must be on format yyyy-mm-dd", true);
-				validCommand = false;
-			}
+				try {
+					_endDate = DateFunctions.getZDTfromStringDate(endDate);
+				} catch (ParseException e) {
+					sendMessage("End date must be on format yyyy-mm-dd", true);
+					validCommand = false;
+				}
 
-			if (_startDate.isAfter(_endDate) || _startDate.isEqual(_endDate)) {
-				sendMessage("Start date must be befor end date", true);
-				validCommand = false;
+				if (_startDate.isAfter(_endDate) || _startDate.isEqual(_endDate)) {
+					sendMessage("Start date must be befor end date", true);
+					validCommand = false;
+				}
+			} else {
+				auxHistoryDays = historyDays * 86400;
+				_endDate = DateFunctions.getZDTToDayStart();
+				_startDate = _endDate.minusSeconds(auxHistoryDays);
 			}
 		}
 
@@ -115,7 +143,7 @@ public class Commands {
 			// ensures that the backtest has the latest configs
 			reloadConfigs();
 
-			exchangeThreads.backtest(exchange, tradeName, historyDays, _startDate, _endDate);
+			exchangeThreads.backtest(exchange, tradeName, _startDate, _endDate);
 		}
 	}
 

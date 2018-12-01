@@ -2,27 +2,21 @@ package com.etricky.cryptobot;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 
-import com.etricky.cryptobot.core.common.DateFunctions;
+import org.ta4j.core.BaseBar;
+import org.ta4j.core.num.PrecisionNum;
 
 public class Test {
 
 	public static void main(String[] args) {
 		// 2018-02-01T00:00:00Z
 
-		System.out.println(DateFunctions.getZDTNow().format(DateTimeFormatter.ISO_INSTANT));
+		System.out.println("start");
 
-		ZonedDateTime date = ZonedDateTime.now(ZoneId.systemDefault());
-		System.out.println(date);
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'H:mX");
-		System.out.println(date.format(formatter));
-		
-		date = DateFunctions.getZDTNow();
-		formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'H:mX");
-		System.out.println(date.format(formatter));
-		
-		System.out.println(DateFunctions.getStringFromUnixTime(DateFunctions.getUnixTimeFromZDT(date)).toString());
+		new BaseBar(ZonedDateTime.of(2018, 01, 1, 12, 0, 0, 0, ZoneId.systemDefault()), 100.0, 100.0, 100.0, 100.0,
+				1060, PrecisionNum::valueOf);
+
+		System.out.println("end");
 
 	}
 }

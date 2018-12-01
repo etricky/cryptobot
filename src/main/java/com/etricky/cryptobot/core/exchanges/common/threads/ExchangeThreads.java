@@ -53,6 +53,7 @@ public class ExchangeThreads {
 	private String exchangeTradeKey;
 	private String exchangeCurrencyTradeThreadKey;
 	private AbstractExchangeTrading abstractExchangeTrading;
+	private int countSharedThreads = 0;
 
 	public int startExchangeTradingThread(String exchange, String tradeName, int tradeType) {
 		ExchangeTrade exchangeTrade;
@@ -136,17 +137,17 @@ public class ExchangeThreads {
 		return returnValue;
 	}
 
-	public void backtest(String exchange, String tradeName, long historyDays, ZonedDateTime startDate,
-			ZonedDateTime endDate) throws ExchangeException {
-		log.debug("start. exchange: {} tradeName: {} historyDays: {} startDate: {} endDate: {}", exchange, tradeName,
-				historyDays, startDate, endDate);
+	public void backtest(String exchange, String tradeName, ZonedDateTime startDate, ZonedDateTime endDate)
+			throws ExchangeException {
+		log.debug("start. exchange: {} tradeName: {} startDate: {} endDate: {}", exchange, tradeName, startDate,
+				endDate);
 
 		// gets a new backtest bean
 		StrategyBacktest backtestBean = (StrategyBacktest) appContext.getBean("strategyBacktest");
-		backtestBean.initialize(ExchangeEnum.getInstanceByName(exchange).get(), tradeName, historyDays, startDate,
-				endDate);
+		backtestBean.initialize(ExchangeEnum.getInstanceByName(exchange).get(), tradeName, startDate, endDate);
 
-		threadExecutor.initializeThreadPool(POOL_BACKTEST, 2, 20);
+		threadExecutor.initializeThreadPool(POOL_BACKTEST, 3,
+				jsonFiles.getExchangesJsonMap().get(exchange).getTradeConfigs().size());
 		threadExecutor.executeTaskOnThreadPool(POOL_BACKTEST, backtestBean);
 
 		log.debug("done");
@@ -196,10 +197,9 @@ public class ExchangeThreads {
 		return threadName;
 	}
 
-	int count = 0;
-
 	private boolean threadShared(String exchange, String tradeName, String currencyEnum, String threadType) {
 		boolean result = false;
+		countSharedThreads = 0;
 
 		log.debug("start. exchange: {} tradeName: {} currencyEnum: {} threadType: {}", exchange, tradeName,
 				currencyEnum, threadType);
@@ -209,7 +209,7 @@ public class ExchangeThreads {
 				if (!trade.getTradeName().equalsIgnoreCase(tradeName)) {
 					trade.getExchangeTradeCurrencyMap().values().forEach(trading -> {
 						if (trading.getCurrencyName().equalsIgnoreCase((currencyEnum))) {
-							count++;
+							countSharedThreads++;
 							log.debug("currency trade thread used by trade: {}", trade.getTradeName());
 						}
 					});
@@ -219,13 +219,13 @@ public class ExchangeThreads {
 			exchangeTradeMap.values().forEach(trade -> {
 				if (!trade.getTradeName().equalsIgnoreCase(tradeName)
 						&& trade.getExchangeAccount().getExchangeEnum().getName().equalsIgnoreCase(exchange)) {
-					count++;
+					countSharedThreads++;
 					log.debug("account thread used by trade: {}", trade.getTradeName());
 				}
 			});
 		}
 
-		if (count > 1) {
+		if (countSharedThreads > 0) {
 			result = true;
 		}
 
