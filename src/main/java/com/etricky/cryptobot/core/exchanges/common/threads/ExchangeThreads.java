@@ -5,11 +5,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.common.threads.ThreadExecutors;
 import com.etricky.cryptobot.core.common.threads.ThreadInfo;
 import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeAccount;
@@ -17,8 +20,6 @@ import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeTrading;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeTrade;
 import com.etricky.cryptobot.core.exchanges.common.enums.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 import com.etricky.cryptobot.core.strategies.backtest.StrategyBacktest;
 
@@ -33,7 +34,7 @@ public class ExchangeThreads {
 	public final static int TRADE_THREAD_NOT_EXISTS = 2;
 	public final static String TRADING_THREAD = "T";
 	public final static String ORDERS_THREAD = "O";
-	public final static String ACOUNT_THREAD = "A";
+	public final static String ACCOUNT_THREAD = "A";
 	public final static String BACKTEST_THREAD = "B";
 	public final static String POOL_BACKTEST = "backtest_pool";
 
@@ -55,7 +56,26 @@ public class ExchangeThreads {
 	private AbstractExchangeTrading abstractExchangeTrading;
 	private int countSharedThreads = 0;
 
-	public int startExchangeTradingThread(String exchange, String tradeName, int tradeType) {
+	/**
+	 * Starts the thread for a trade of a specific exchange.
+	 * 
+	 * @param exchange  Exchange to be used
+	 * @param tradeName Name of the trade strategy
+	 * @param tradeType Type of trading that should be performed:
+	 *                  <ul>
+	 *                  <li>FULL: adds past trades to the database, process all
+	 *                  strategies for the trade and issues exchange orders</li>
+	 *                  <li>DRY_RUN: adds past trades to the database, process all
+	 *                  strategies but does not issues exchange orders</li>
+	 *                  <li>HISTORY_ONLY: only adds past trades to the database</li>
+	 *                  <li>BACKTEST: backtest scenario where all strategies are
+	 *                  processed but no past trades are added to the database and
+	 *                  no exchange orders are issued</li>
+	 *                  </ul>
+	 * @return
+	 * @throws ExchangeException
+	 */
+	public int startExchangeTradingThread(String exchange, String tradeName, int tradeType) throws ExchangeException {
 		ExchangeTrade exchangeTrade;
 		AbstractExchangeAccount abstractExchangeAccount;
 		int returnValue = OK;
@@ -66,7 +86,7 @@ public class ExchangeThreads {
 
 		// validates if the trade already exists
 		if (exchangeTradeMap.containsKey(exchangeTradeKey)) {
-			log.debug("trade already exists");
+			log.debug("tradeName {} already exists", tradeName);
 			returnValue = TRADE_THREAD_EXISTS;
 		} else {
 
@@ -74,16 +94,16 @@ public class ExchangeThreads {
 			exchangeTrade = (ExchangeTrade) appContext.getBean("exchangeTrade");
 
 			if (exchangeAccountsThreadsMap.containsKey(exchange)) {
-				log.debug("exchange orders thread already exists");
+				log.debug("exchange {} orders thread already exists", exchange);
 				abstractExchangeAccount = exchangeAccountsThreadsMap.get(exchange);
 			} else {
 				// launch exchange orders thread if it doesn't exist
-				log.debug("create exchange orders bean");
+				log.debug("create exchange {}orders bean", exchange);
 
 				abstractExchangeAccount = (AbstractExchangeAccount) appContext.getBean(exchangeEnum.getAccountBean());
 
-				ThreadInfo threadInfo = new ThreadInfo(getThreadName(exchange, tradeName, ACOUNT_THREAD, null));
-				abstractExchangeAccount.initialize(exchangeEnum, threadInfo);
+				ThreadInfo threadInfo = new ThreadInfo(getThreadName(exchange, tradeName, ACCOUNT_THREAD, null));
+				abstractExchangeAccount.initialize(exchangeEnum, Optional.of(threadInfo), true);
 
 				exchangeAccountsThreadsMap.put(exchange, abstractExchangeAccount);
 
@@ -103,7 +123,8 @@ public class ExchangeThreads {
 				setExchangeCurrencyTradeThreadKey(exchange, currencyEnum);
 
 				if (exchangeCurrencyTradeThreadsMap.containsKey(exchangeCurrencyTradeThreadKey)) {
-					log.debug("exchange currency thread {} already exists", exchangeCurrencyTradeThreadKey);
+					log.debug("exchange {} currency thread {} already exists", exchange,
+							exchangeCurrencyTradeThreadKey);
 
 					abstractExchangeTrading = exchangeCurrencyTradeThreadsMap.get(exchangeCurrencyTradeThreadKey);
 				} else {
@@ -114,9 +135,9 @@ public class ExchangeThreads {
 					// starts the trading thread
 					ThreadInfo threadInfo = new ThreadInfo(
 							getThreadName(exchange, tradeName, TRADING_THREAD, currencyEnum));
-					abstractExchangeTrading.initialize(exchangeEnum, currencyEnum, threadInfo);
+					abstractExchangeTrading.initialize(exchangeEnum, currencyEnum, threadInfo, false);
 
-					log.debug("create exchange trading bean for currencyPair: {}", currencyPair);
+					log.debug("create exchange {} trading bean for currencyPair: {}", exchange, currencyPair);
 
 					exchangeCurrencyTradeThreadsMap.put(exchangeCurrencyTradeThreadKey, abstractExchangeTrading);
 					threadExecutor.executeSingle(abstractExchangeTrading);
@@ -215,7 +236,7 @@ public class ExchangeThreads {
 					});
 				}
 			});
-		} else if (threadType == ACOUNT_THREAD) {
+		} else if (threadType == ACCOUNT_THREAD) {
 			exchangeTradeMap.values().forEach(trade -> {
 				if (!trade.getTradeName().equalsIgnoreCase(tradeName)
 						&& trade.getExchangeAccount().getExchangeEnum().getName().equalsIgnoreCase(exchange)) {
@@ -245,14 +266,14 @@ public class ExchangeThreads {
 				});
 
 		auxList.forEach(trade -> {
-			log.debug("stopping trade {}", trade);
+			log.debug("stopping trade {} for exchange: {}", trade, exchange);
 			stopTradeThreads(exchange, trade);
 		});
 
 		log.debug("done");
 	}
 
-	public int stopTradeThreads(String exchange, String tradeName) {
+	public synchronized int stopTradeThreads(String exchange, String tradeName) {
 		log.debug("start. exchange: {} tradeName: {}", exchange, tradeName);
 
 		setExchangeTradeKey(exchange, tradeName);
@@ -279,7 +300,7 @@ public class ExchangeThreads {
 				}
 			});
 
-			if (!threadShared(exchange, tradeName, null, ACOUNT_THREAD)) {
+			if (!threadShared(exchange, tradeName, null, ACCOUNT_THREAD)) {
 				log.debug("sending interrupt to orders thread: {} id: {}",
 						exchangeTradeMap.get(exchangeTradeKey).getExchangeAccount().getThreadInfo().getThreadName(),
 						exchangeTradeMap.get(exchangeTradeKey).getExchangeAccount().getThreadInfo().getThread()
@@ -290,6 +311,7 @@ public class ExchangeThreads {
 			}
 
 			// removes the trade from the map
+			log.debug("removing {} from exchangeTradeMap", exchangeTradeKey);
 			exchangeTradeMap.remove(exchangeTradeKey);
 		} else {
 			log.debug("no trade {} found", exchangeTradeKey);

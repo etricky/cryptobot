@@ -3,7 +3,6 @@ package com.etricky.cryptobot.core.strategies.common;
 import java.math.BigDecimal;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.ta4j.core.Bar;
 import org.ta4j.core.BaseTimeSeries;
 import org.ta4j.core.Order.OrderType;
 import org.ta4j.core.Strategy;
@@ -14,8 +13,8 @@ import org.ta4j.core.indicators.TripleEMAIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 
 import com.etricky.cryptobot.core.common.NumericFunctions;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.StrategiesJson;
 import com.etricky.cryptobot.core.strategies.StrategyResult;
@@ -131,7 +130,6 @@ public abstract class AbstractStrategy {
 			OrderType exchangeLastOrderType) throws ExchangeException {
 		StrategyResult strategyResult;
 		int endIndex, result = NO_ACTION;
-		Bar lastBar;
 
 		log.trace(
 				"start. currency: {} timeSeries: {} balance: {} amount: {} lastOrderBalance: {} lastOrderAmount: {} exchangeLastOrderType: {}",
@@ -150,7 +148,6 @@ public abstract class AbstractStrategy {
 		if (addTradeToTimeSeries(tradeEntity)) {
 
 			endIndex = timeSeries.getEndIndex();
-			lastBar = timeSeries.getLastBar();
 
 			if (log.isTraceEnabled() && jsonFiles.getStrategiesJsonMap().get(strategy.getName()).getType()
 					.equalsIgnoreCase(STRATEGY_TYPE_TRADING))

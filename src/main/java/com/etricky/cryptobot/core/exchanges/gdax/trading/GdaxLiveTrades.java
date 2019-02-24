@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.model.TradeEntity;
 import com.etricky.cryptobot.model.TradesData;
 import com.etricky.cryptobot.model.pks.ExchangePK;

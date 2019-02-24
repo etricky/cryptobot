@@ -58,10 +58,12 @@ public interface TradesEntityRepository extends CrudRepository<TradeEntity, Exch
 	 * @param currency
 	 * @param startDataUnixTime
 	 * @param endDataUnixTime
+	 * @param modFactor         TODO
 	 * @return
 	 */
-	@Query(value = "SELECT * FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME <= ?4 AND FAKE_TRADE = FALSE", nativeQuery = true)
-	List<TradeEntity> getTradesInPeriodNoFake(String exchange, String currency, long startDataUnixTime, long endDataUnixTime);
+	@Query(value = "SELECT * FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME <= ?4 AND FAKE_TRADE = FALSE AND MOD(unixtime,?5)=0", nativeQuery = true)
+	List<TradeEntity> getTradesInPeriodNoFake(String exchange, String currency, long startDataUnixTime,
+			long endDataUnixTime, long modFactor);
 
 	/**
 	 * Returns all trades, fake or not, in the specified period
@@ -70,8 +72,10 @@ public interface TradesEntityRepository extends CrudRepository<TradeEntity, Exch
 	 * @param currency
 	 * @param startDataUnixTime
 	 * @param endDataUnixTime
+	 * @param modFactor         TODO
 	 * @return
 	 */
-	@Query(value = "SELECT * FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME <= ?4", nativeQuery = true)
-	List<TradeEntity> getAllTradesInPeriod(String exchange, String currency, long startDataUnixTime, long endDataUnixTime);
+	@Query(value = "SELECT * FROM TRADES t1 WHERE EXCHANGE = ?1 AND CURRENCY = ?2 AND UNIXTIME >= ?3 AND UNIXTIME <= ?4 AND MOD(unixtime,?5)=0", nativeQuery = true)
+	List<TradeEntity> getAllTradesInPeriod(String exchange, String currency, long startDataUnixTime,
+			long endDataUnixTime, long modFactor);
 }

@@ -1,7 +1,8 @@
 package com.etricky.cryptobot.core.exchanges.common;
 
-import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.Currency;
@@ -10,13 +11,15 @@ import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.account.Balance;
 import org.knowm.xchange.dto.account.Wallet;
 import org.knowm.xchange.dto.marketdata.Ticker;
+import org.springframework.beans.factory.annotation.Autowired;
 
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.common.threads.ThreadExecutors;
 import com.etricky.cryptobot.core.common.threads.ThreadInfo;
 import com.etricky.cryptobot.core.exchanges.common.enums.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeExceptionRT;
+import com.etricky.cryptobot.core.exchanges.common.enums.FiatCurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.Commands;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
@@ -41,23 +44,47 @@ public abstract class AbstractExchangeAccount extends AbstractExchange implement
 	private String walletInfo;
 
 	protected ThreadExecutors threadExecutors;
+	@Autowired
+	@Getter
+	protected AbstractExchangeOrders abstractExchangeOrders;
 
 	public AbstractExchangeAccount(ExchangeThreads exchangeThreads, Commands commands, JsonFiles jsonFiles,
-			ThreadExecutors threadExecutors) {
+			ThreadExecutors threadExecutors) throws ExchangeException {
 		super(exchangeThreads, commands, jsonFiles);
 		this.threadExecutors = threadExecutors;
+
+		connectToExchange();
 	}
 
-	public void initialize(ExchangeEnum exchangeEnum, ThreadInfo threadInfo) {
-		log.debug("start. exchange: {}", exchangeEnum.getName());
+	public abstract void connectToExchange() throws ExchangeException;
+
+	/**
+	 * Obtains the metadata of the exchange product for the specified CurrencyEnum.
+	 * 
+	 * @param currencyEnum The base and quote currency pair
+	 * @return A ExchangeOrderMetaData optional
+	 * @throws ExchangeException
+	 */
+	public abstract Optional<ExchangeProductMetaData> getProductMetaData(CurrencyEnum currencyEnum)
+			throws ExchangeException;
+
+	public void initialize(ExchangeEnum exchangeEnum, Optional<ThreadInfo> threadInfo, boolean loadOrders)
+			throws ExchangeException {
+		log.debug("start. exchange: {} loadOrders: {}", exchangeEnum.getName(), loadOrders);
 
 		this.exchangeEnum = exchangeEnum;
-		this.threadInfo = threadInfo;
+		if (threadInfo.isPresent()) {
+			this.threadInfo = threadInfo.get();
+			threadExecutors.initializeBlockingQueue(exchangeEnum.getName());
+		}
 
-		threadExecutors.initializeBlockingQueue(exchangeEnum.getName());
+		abstractExchangeOrders = (AbstractExchangeOrders) appContext.getBean(exchangeEnum.getOrdersBean());
+		abstractExchangeOrders.initialize(exchangeEnum, threadInfo, this, loadOrders);
 
 		log.debug("done");
 	}
+
+	Optional<CurrencyPair> currencyPair, aux = Optional.empty();
 
 	public String getWalletInfo() {
 		log.debug("start");
@@ -65,18 +92,46 @@ public abstract class AbstractExchangeAccount extends AbstractExchange implement
 		Wallet wallet = accountInfo.getWallet();
 		walletInfo = "ID: " + wallet.getId() + "\n";
 		Map<Currency, Balance> balanceMap = wallet.getBalances();
+		List<CurrencyPair> currencies = exchange.getExchangeSymbols();
 
 		balanceMap.forEach((curr, bal) -> {
 			try {
+				Ticker ticker;
+				currencyPair = Optional.empty();
+				aux = Optional.empty();
 
-				if (CurrencyEnum.getInstanceByQuoteBase(curr.getCurrencyCode(), "EUR").isPresent()) {
-					CurrencyPair currencyPair = CurrencyEnum.getInstanceByQuoteBase(curr.getCurrencyCode(), "EUR").get()
-							.getCurrencyPair();
+				walletInfo += "Currency: " + curr + " Amount: " + bal.getAvailable();
+				log.debug("Currency: {} Amount: {}", curr, bal.getAvailable());
 
-					Ticker ticker = exchange.getMarketDataService().getTicker(currencyPair, (Object[]) null);
+				currencies.stream().filter(x -> curr.getCurrencyCode().equals(x.base.getCurrencyCode()))
+						.forEach(currPair -> {
+							aux = Optional.of(currPair);
+							if (currPair.counter.equals(FiatCurrencyEnum.EUR.getCurrency())) {
+								currencyPair = Optional.of(currPair);
+							}
+						});
 
-					walletInfo += "Currency: " + curr + " Amount: " + bal.getAvailable() + " Balance: "
-							+ bal.getAvailable().multiply(ticker.getLast()) + "\n";
+				if (!currencyPair.isPresent()) {
+					currencyPair = aux;
+				}
+
+				log.debug("currencyPair: {}", currencyPair);
+
+				if (!FiatCurrencyEnum.isFiatCurrency(curr)) {
+					log.debug("not fiat currency");
+					try {
+						ticker = exchange.getMarketDataService().getTicker(currencyPair.get(), (Object[]) null);
+
+						walletInfo += " Last Value: " + ticker.getLast() + "/"
+								+ currencyPair.get().counter.getDisplayName() + " Balance: "
+								+ bal.getAvailable().multiply(ticker.getLast()) + "\n";
+					} catch (Exception e) {
+						log.error("Unable to get ticker for {}", currencyPair);
+						walletInfo += "\n";
+					}
+				} else {
+					log.debug("fiat currency");
+					walletInfo += "\n";
 				}
 
 			} catch (Exception e) {
@@ -87,31 +142,6 @@ public abstract class AbstractExchangeAccount extends AbstractExchange implement
 
 		log.debug("done");
 		return walletInfo;
-	}
-
-	public BigDecimal[] getWallet(CurrencyEnum currencyEnum) throws ExchangeException {
-		BigDecimal[] wallet = new BigDecimal[2];
-
-		log.trace("start. currency: {}", currencyEnum.getShortName());
-
-		if (accountInfo.getWallet().getBalances().containsKey(Currency.getInstance(currencyEnum.getBaseCurrency()))) {
-			wallet[BASE_CURRENCY] = accountInfo.getWallet()
-					.getBalance(Currency.getInstance(currencyEnum.getBaseCurrency())).getAvailable();
-		} else {
-			log.error("Invalid base currency: {}", currencyEnum.getBaseCurrency());
-			throw new ExchangeException("Invalid base currency: " + currencyEnum.getBaseCurrency());
-		}
-
-		if (accountInfo.getWallet().getBalances().containsKey(Currency.getInstance(currencyEnum.getQuoteCurrency()))) {
-			wallet[QUOTE_CURRENCY] = accountInfo.getWallet()
-					.getBalance(Currency.getInstance(currencyEnum.getQuoteCurrency())).getAvailable();
-		} else {
-			log.error("Invalid quote currency: {}", currencyEnum.getQuoteCurrency());
-			throw new ExchangeException("Invalid quote currency: " + currencyEnum.getQuoteCurrency());
-		}
-
-		log.trace("done. wallet: {}", (Object[]) wallet);
-		return wallet;
 	}
 
 	@Override

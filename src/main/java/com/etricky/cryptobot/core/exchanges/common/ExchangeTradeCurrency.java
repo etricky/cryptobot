@@ -14,9 +14,9 @@ import org.ta4j.core.TradingRecord;
 import org.ta4j.core.num.PrecisionNum;
 
 import com.etricky.cryptobot.core.common.NumericFunctions;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 import com.etricky.cryptobot.core.strategies.StrategyResult;
 import com.etricky.cryptobot.core.strategies.common.AbstractStrategy;

@@ -16,14 +16,14 @@ import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.common.NumericFunctions;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.common.threads.ThreadInfo;
 import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeAccount;
 import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeTrading;
 import com.etricky.cryptobot.core.exchanges.common.ExchangeTrade;
 import com.etricky.cryptobot.core.exchanges.common.enums.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.interfaces.Commands;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 import com.etricky.cryptobot.core.strategies.StrategyResult;
@@ -74,7 +74,7 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 
 	private String tradeName, currencyName;
 	private final String TRADE_KEY = "trade_key";
-	private long startDateUnixTime, endDateUnixTime, backtestStart, strategyInitialPeriod = 0;
+	private long startDateUnixTime, endDateUnixTime, backtestStart, strategyInitialPeriod = 0, modFactor = 0;
 	private long counter, backtestResultsIndex = 0;
 	private ZonedDateTime startDate, endDate;
 
@@ -91,13 +91,21 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 				.forEach(tradeStrategy -> {
 					if (jsonFiles.getStrategiesJsonMap().containsKey(tradeStrategy.getStrategyName())) {
 						if (strategyInitialPeriod == 0 || strategyInitialPeriod < jsonFiles.getStrategiesJsonMap()
-								.get(tradeStrategy.getStrategyName()).getInitialPeriod())
+								.get(tradeStrategy.getStrategyName()).getInitialPeriod()) {
 							strategyInitialPeriod = jsonFiles.getStrategiesJsonMap()
 									.get(tradeStrategy.getStrategyName()).getInitialPeriod();
+						}
+
+						if (modFactor == 0 || modFactor < jsonFiles.getStrategiesJsonMap()
+								.get(tradeStrategy.getStrategyName()).getBarDurationSec()) {
+							modFactor = jsonFiles.getStrategiesJsonMap().get(tradeStrategy.getStrategyName())
+									.getBarDurationSec();
+						}
 					}
+
 				});
 
-		log.debug("strategyInitialPeriod: {}", strategyInitialPeriod);
+		log.debug("strategyInitialPeriod: {} modFactor: {}", strategyInitialPeriod, modFactor);
 
 		this.startDate = startDate.minusSeconds(strategyInitialPeriod);
 		this.endDate = endDate;
@@ -119,13 +127,14 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 	 * @param endDate                 Final date of the trade history period to be
 	 *                                processed
 	 * @throws ExchangeException
+	 * @throws InterruptedException
 	 */
 	private synchronized static void processTradeHistory(AbstractExchangeTrading abstractExchangeTrading,
 			ZonedDateTime startDate, ZonedDateTime endDate) throws ExchangeException {
 		abstractExchangeTrading.processTradeHistory(Optional.of(startDate), Optional.of(endDate));
 	}
 
-	private void setExchangeTrade() {
+	private void setExchangeTrade() throws ExchangeException {
 		log.debug("start");
 
 		exchangeTrade = (ExchangeTrade) appContext.getBean("exchangeTrade");
@@ -133,7 +142,7 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 		AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
 				.getBean(exchangeEnum.getAccountBean());
 
-		abstractExchangeAccount.initialize(exchangeEnum, new ThreadInfo("backtest"));
+		abstractExchangeAccount.initialize(exchangeEnum, Optional.of(new ThreadInfo("backtest")), false);
 
 		exchangeTrade.initialize(tradeName, exchangeEnum, abstractExchangeAccount,
 				AbstractExchangeTrading.TRADE_BACKTEST);
@@ -150,11 +159,12 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 				AbstractExchangeTrading abstractExchangeTrading = (AbstractExchangeTrading) appContext
 						.getBean(exchangeEnum.getTradingBean());
 
-				abstractExchangeTrading.initialize(exchangeEnum, currencyEnum, new ThreadInfo("backtest"));
+				abstractExchangeTrading.initialize(exchangeEnum, currencyEnum, new ThreadInfo("backtest"), true);
 
+				// ensures history trades are stored
 				StrategyBacktest.processTradeHistory(abstractExchangeTrading, startDate, endDate);
 
-				log.debug("create exchange trading bean for currencyPair: {}", currencyPair);
+				log.debug("created exchange trading bean for currencyPair: {}", currencyPair);
 
 				exchangeTrade.addExchangeTrading(currencyEnum, abstractExchangeTrading);
 			} catch (ExchangeException e) {
@@ -176,7 +186,8 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 
 			// load trades from BD for the currency
 			dbTradeEntityList = tradesData.getTradesInPeriod(exchangeEnum.getName(), currencyName, startDateUnixTime,
-					endDateUnixTime, jsonFiles.getExchangesJsonMap().get(exchangeEnum.getName()).getAllowFakeTrades());
+					endDateUnixTime, jsonFiles.getExchangesJsonMap().get(exchangeEnum.getName()).getAllowFakeTrades(),
+					modFactor);
 
 			if (dbTradeEntityList.size() != 0) {
 				log.debug("for currency {} got {} trades from database", currencyName, dbTradeEntityList.size());
@@ -413,7 +424,7 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 		log.debug("done");
 	}
 
-	public void backTest() {
+	public void backTest() throws ExchangeException {
 
 		log.debug("start");
 
@@ -455,12 +466,19 @@ public class StrategyBacktest implements Runnable, UncaughtExceptionHandler {
 	@Override
 	public void run() {
 		log.info("start");
+		try {
+			Thread.currentThread().setUncaughtExceptionHandler(this);
 
-		Thread.currentThread().setUncaughtExceptionHandler(this);
+			Thread.currentThread().setName("B_" + exchangeEnum.getName() + "_" + tradeName);
+			backTest();
 
-		Thread.currentThread().setName("B_" + exchangeEnum.getName() + "_" + tradeName);
-		backTest();
+			log.info("done");
 
-		log.info("done");
+		} catch (ExchangeException e) {
+			log.error("Exception: {}", e);
+
+			commands.sendMessage("Exception occurred on " + Thread.currentThread().getName() + ". Stopping thread",
+					true);
+		}
 	}
 }

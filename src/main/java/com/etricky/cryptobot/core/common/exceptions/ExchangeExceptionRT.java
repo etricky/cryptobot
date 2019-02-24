@@ -1,4 +1,4 @@
-package com.etricky.cryptobot.core.exchanges.common.exceptions;
+package com.etricky.cryptobot.core.common.exceptions;
 
 public class ExchangeExceptionRT extends RuntimeException {
 

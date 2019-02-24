@@ -15,11 +15,12 @@ import org.springframework.stereotype.Component;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
 import com.etricky.cryptobot.core.common.ExitCode;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeAccount;
 import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeTrading;
 import com.etricky.cryptobot.core.exchanges.common.enums.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
@@ -46,6 +47,8 @@ public class Commands {
 	ExchangeThreads exchangeThreads;
 	@Autowired
 	JsonFiles jsonFiles;
+	@Autowired
+	CryptoBotTest cryptoBotTest;
 
 	private String auxString = null;
 	private boolean validCommand;
@@ -78,6 +81,7 @@ public class Commands {
 
 	public void backFill(String exchange) {
 		log.debug("start. exchange: {}", exchange);
+
 		try {
 			reloadConfigs();
 
@@ -85,8 +89,14 @@ public class Commands {
 				ExchangeJson exchangeJson = jsonFiles.getExchangesJsonMap().get(exchange);
 
 				exchangeJson.getTradeConfigsMap().values().forEach(tradeConfigs -> {
-					exchangeThreads.startExchangeTradingThread(exchange, tradeConfigs.getTradeName(),
-							AbstractExchangeTrading.TRADE_TYPE_HISTORY_ONLY);
+					try {
+						log.debug("starting trade: {}", tradeConfigs.getTradeName());
+						exchangeThreads.startExchangeTradingThread(exchange, tradeConfigs.getTradeName(),
+								AbstractExchangeTrading.TRADE_TYPE_HISTORY_ONLY);
+					} catch (ExchangeException e) {
+						log.error("Exception: {}", e);
+						throw new ExchangeExceptionRT(e);
+					}
 				});
 			}
 
@@ -168,7 +178,8 @@ public class Commands {
 							exceptionHandler(e);
 						}
 					});
-				}
+				} else
+					log.debug("not a valid command");
 
 			} else {
 				executeBacktest(_exchange, _tradeName, historyDays, startDate, endDate);
@@ -189,17 +200,42 @@ public class Commands {
 		try {
 			sendMessage("Stopping trade for exchange: " + _exchange + " tradeName: " + _tradeName, true);
 
-			if (validateTrade(_exchange, Optional.of(_tradeName))) {
+			if (_tradeName.equalsIgnoreCase("ALL")) {
+				validCommand = validateTrade(exchange, Optional.empty());
+				if (validCommand) {
+					exchangeThreads.stopExchangeThreads(_exchange);
+				} else
+					log.debug("not a valid command");
+
+			} else {
 				int result = exchangeThreads.stopTradeThreads(_exchange, _tradeName);
 				if (result == ExchangeThreads.TRADE_THREAD_NOT_EXISTS) {
 					sendMessage("no trade " + exchangeThreads.getExchangeTradeKey(_exchange, _tradeName) + " found",
 							true);
 				}
-			} else
-				log.debug("not a valid command");
+			}
+
 		} catch (Exception e) {
 			exceptionHandler(e);
 		}
+
+		log.debug("done");
+	}
+
+	public void listExchangeTrades(boolean toExternalApp) {
+		log.debug("start");
+
+		reloadConfigs();
+
+		auxString = "";
+		jsonFiles.getExchangesJsonMap().forEach((exchangeName, exchangeMap) -> {
+			auxString = auxString.concat("Exchange:" + exchangeName + "\n");
+			exchangeMap.getTradeConfigs().forEach(tradeConfig -> {
+				auxString = auxString.concat(" - " + tradeConfig.getTradeName() + "\n");
+			});
+		});
+
+		sendMessage(auxString, toExternalApp);
 
 		log.debug("done");
 	}
@@ -228,6 +264,102 @@ public class Commands {
 		log.debug("done");
 	}
 
+	public void listExchangeOrders(String exchange, boolean toExternalApp) {
+		String _exchange = exchange.toUpperCase();
+		log.debug("start. exchange: {}", _exchange);
+
+		try {
+			if (validateTrade(_exchange)) {
+				AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
+						.getBean(ExchangeEnum.getInstanceByName(_exchange).get().getAccountBean());
+				abstractExchangeAccount.initialize(ExchangeEnum.getInstanceByName(_exchange).get(), Optional.empty(), true);
+				sendMessage(abstractExchangeAccount.getAbstractExchangeOrders().getOpenOrdersString(), toExternalApp);
+			}
+		} catch (Exception e) {
+			exceptionHandler(e);
+		}
+
+		log.debug("done");
+	}
+
+	public void cancelExchangeOrder(String exchange, String currencyPair, boolean toExternalApp) {
+		String _exchange = exchange.toUpperCase();
+
+		log.debug("start. exchange: {} OrderId: {}", _exchange, currencyPair);
+
+		try {
+			auxString = null;
+			if (CurrencyEnum.getInstanceByShortName(currencyPair).isPresent()) {
+				if (validateTrade(_exchange)) {
+					AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
+							.getBean(ExchangeEnum.getInstanceByName(_exchange).get().getAccountBean());
+					abstractExchangeAccount.initialize(ExchangeEnum.getInstanceByName(_exchange).get(),
+							Optional.empty(), true);
+
+					if (abstractExchangeAccount.getAbstractExchangeOrders().checkOrder(currencyPair)) {
+						if (abstractExchangeAccount.getAbstractExchangeOrders().cancelOrder(currencyPair)) {
+							auxString = "Order has been canceled";
+						} else {
+							auxString = "Order has NOT been canceled";
+						}
+					} else {
+						auxString = "Order doesn't exist";
+					}
+					sendMessage(auxString, toExternalApp);
+				}
+			} else {
+				auxString = "Invalid CurrencyPair. Valid values:\n";
+				Arrays.stream(CurrencyEnum.values()).forEach(curr -> {
+					auxString += curr.getShortName();
+				});
+				sendMessage(auxString, toExternalApp);
+			}
+		} catch (Exception e) {
+			exceptionHandler(e);
+		}
+
+		log.debug("done");
+	}
+
+	public void cancelExchangeOrders(String exchange, boolean toExternalApp) {
+		String _exchange = exchange.toUpperCase();
+		log.debug("start. exchange: {}", _exchange);
+
+		try {
+			if (validateTrade(_exchange)) {
+				AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
+						.getBean(ExchangeEnum.getInstanceByName(_exchange).get().getAccountBean());
+				abstractExchangeAccount.initialize(ExchangeEnum.getInstanceByName(_exchange).get(), Optional.empty(), true);
+				sendMessage(abstractExchangeAccount.getAbstractExchangeOrders().cancelAllOrders(), toExternalApp);
+			}
+		} catch (Exception e) {
+			exceptionHandler(e);
+		}
+
+		log.debug("done");
+	}
+
+	public void printWalletInfo(String exchange) {
+		String _exchange = exchange.toUpperCase();
+		log.debug("start. exchange: {}", _exchange);
+
+		if (validateTrade(_exchange)) {
+			AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
+					.getBean(ExchangeEnum.getInstanceByName(_exchange).get().getAccountBean());
+			sendMessage(abstractExchangeAccount.getWalletInfo(), true);
+		}
+
+		log.debug("done");
+	}
+
+	public void genericTest(String[] args) {
+		try {
+			cryptoBotTest.runTest(args);
+		} catch (Exception e) {
+			exceptionHandler(e);
+		}
+	}
+
 	public void quitApplication() {
 		log.debug("start");
 
@@ -253,19 +385,6 @@ public class Commands {
 			jsonFiles.initialize();
 		} catch (Exception e) {
 			exceptionHandler(e);
-		}
-
-		log.debug("done");
-	}
-
-	public void printWalletInfo(String exchange) {
-		String _exchange = exchange.toUpperCase();
-		log.debug("start. exchange: {}", _exchange);
-
-		if (validateTrade(_exchange)) {
-			AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
-					.getBean(ExchangeEnum.getInstanceByName(_exchange).get().getAccountBean());
-			sendMessage(abstractExchangeAccount.getWalletInfo(), true);
 		}
 
 		log.debug("done");
@@ -326,7 +445,7 @@ public class Commands {
 
 					});
 				} else {
-					sendMessage("Trade config not yet configured", true);
+					sendMessage("Trade config " + _tradeName + "not yet configured", true);
 					sendMessage("Valid trade configs:");
 					exchangeJson.getTradeConfigs().forEach((t) -> {
 						sendMessage(" - " + t.getTradeName());
@@ -346,10 +465,22 @@ public class Commands {
 		return validCommand;
 	}
 
+	/**
+	 * Writes a message to System output only
+	 * 
+	 * @param msg Text to be sent
+	 */
 	private void sendMessage(String msg) {
 		sendMessage(msg, false);
 	}
 
+	/**
+	 * Writes a message to System output and can also send it to any external
+	 * application like Slack
+	 * 
+	 * @param msg           Text to be sent
+	 * @param toExternalApp If the message should be sent to external applications
+	 */
 	public void sendMessage(String msg, boolean toExternalApp) {
 		log.debug("start. msg: {} toExternalApp: {}", msg, toExternalApp);
 

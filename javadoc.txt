@@ -1,6 +1,5 @@
 @param tradeEntity The trade values reported by the exchange
 @param backtest    If this method is being invoked by a backtest
-@param tradeEntity The trade values reported by the exchange
 @param strategy    Strategy that is being executed
 @param barDuration Duration of each bar of the time series
 @param balance     Current available balance
@@ -13,3 +12,19 @@
 @param lastOrderType   Type of the last order (BUY or SELL)
 @param exchangeBalance Balance available on the exchange
 @param exchangeAmount Amount available on the exchange
+@param tradeName       Name of the trade strategy
+@param tradeType       Type of trading that should be performed:
+                       <ul>
+                       <li>FULL: adds past trades to the database, process
+                       all strategies for the trade and issues exchange
+                       orders</li>
+                       <li>DRY_RUN: adds past trades to the database, process
+                       all strategies but does not issues exchange
+                       orders</li>
+                       <li>HISTORY_ONLY: only adds past trades to the
+                       database</li>
+                       <li>BACKTEST: backtest scenario where all strategies
+                       are processed but no past trades are added to the
+                       database and no exchange orders are issued</li>
+                       </ul>
+@param currencyPair	Base and quote currency

@@ -10,7 +10,7 @@ import org.ta4j.core.TimeSeries;
 import org.ta4j.core.num.PrecisionNum;
 
 import com.etricky.cryptobot.core.common.DateFunctions;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.model.TradeEntity;
 
 import lombok.extern.slf4j.Slf4j;

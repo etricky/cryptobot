@@ -5,7 +5,7 @@ import java.io.IOException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeExceptionRT;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.SlackJson;
 import com.etricky.cryptobot.core.interfaces.shell.ShellCommands;
@@ -106,6 +106,11 @@ public class Slack implements SlackMessagePostedListener {
 		log.debug("done");
 	}
 
+	/**
+	 * Executes the command that was entered in Slack
+	 * 
+	 * @param command Command to be executed
+	 */
 	private void shellCommand(String command) {
 
 		log.debug("start. command: {}", command);

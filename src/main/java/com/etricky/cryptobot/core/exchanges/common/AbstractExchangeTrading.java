@@ -5,10 +5,10 @@ import java.beans.PropertyChangeSupport;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.common.threads.ThreadInfo;
 import com.etricky.cryptobot.core.exchanges.common.enums.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.Commands;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
@@ -47,13 +47,15 @@ public abstract class AbstractExchangeTrading extends AbstractExchange implement
 		super(exchangeThreads, commands, jsonFiles);
 	}
 
-	public void initialize(ExchangeEnum exchangeEnum, CurrencyEnum currencyEnum, ThreadInfo threadInfo) {
-		log.debug("start. exchange: {} currency: {} tradeType: {} threadInfo: {}", exchangeEnum, currencyEnum,
-				threadInfo);
+	public void initialize(ExchangeEnum exchangeEnum, CurrencyEnum currencyEnum, ThreadInfo threadInfo,
+			boolean backtestTrade) {
+		log.debug("start. exchange: {} currency: {} tradeType: {} threadInfo: {} backtestTrade: {}", exchangeEnum,
+				currencyEnum, threadInfo, backtestTrade);
 
 		this.currencyEnum = currencyEnum;
 		this.exchangeEnum = exchangeEnum;
 		this.threadInfo = threadInfo;
+		this.backtestTrade = backtestTrade;
 
 		liveTradeProperty = new PropertyChangeSupport(this);
 

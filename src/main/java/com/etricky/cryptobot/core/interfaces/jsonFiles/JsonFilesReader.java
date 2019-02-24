@@ -9,7 +9,7 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ResourceUtils;
 
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;

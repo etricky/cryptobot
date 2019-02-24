@@ -2,6 +2,9 @@ package com.etricky.cryptobot.core.exchanges.common;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+
 import com.etricky.cryptobot.core.common.threads.ThreadInfo;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
@@ -14,6 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public abstract class AbstractExchange implements UncaughtExceptionHandler {
+
+	@Autowired
+	protected ApplicationContext appContext;
 
 	@Getter
 	protected ThreadInfo threadInfo;

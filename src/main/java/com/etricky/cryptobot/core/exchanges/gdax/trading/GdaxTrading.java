@@ -10,9 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.exchanges.common.AbstractExchangeTrading;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.Commands;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
@@ -74,6 +74,9 @@ public class GdaxTrading extends AbstractExchangeTrading {
 			log.debug("starting processing live trade");
 			processingLiveTrades = true;
 
+			commands.sendMessage("Started trading trade for exchange: " + exchangeEnum.getName() + " currency: "
+					+ currencyEnum.getShortName(), true);
+
 			try {
 				subscription = streamingExchange.getStreamingMarketDataService()
 						.getTrades(currencyEnum.getCurrencyPair()).subscribe(trade -> {
@@ -110,9 +113,6 @@ public class GdaxTrading extends AbstractExchangeTrading {
 			setThreadInfoData();
 
 			startTrade();
-
-			commands.sendMessage("Started trading trade for exchange: " + exchangeEnum.getName() + " currency: "
-					+ currencyEnum.getShortName(), true);
 
 			log.debug("putting thread {} to sleep", threadInfo.getThreadName());
 			Thread.sleep(Long.MAX_VALUE);

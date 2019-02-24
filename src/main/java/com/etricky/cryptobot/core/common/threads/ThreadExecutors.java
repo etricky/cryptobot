@@ -9,7 +9,7 @@ import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
 
 import lombok.extern.slf4j.Slf4j;
 

@@ -3,7 +3,7 @@
         "name": "GDAX",
         "tradeHistoryDays": 400,
         "fee": 0.3,
-        "sandbox": false,
+        "sandbox": true,
         "allowFakeTrades": true,
         "orderMinimums": [
             {
@@ -59,7 +59,7 @@
         ],
         "tradeConfigs": [
             {
-                "tradeName": "BTC_EUR_B",
+                "tradeName": "B_BTC",
                 "strategies": [
                     {
                         "strategyName": "stopLossStrategy",
@@ -76,7 +76,77 @@
                 ]
             },
             {
-                "tradeName": "BTC_EUR_DAILY",
+                "tradeName": "B_BTC_ETH",
+                "strategies": [
+                    {
+                        "strategyName": "stopLossStrategy",
+                        "currencyPairs": [
+                            "BTC_EUR",
+                            "ETH_EUR"
+                        ]
+                    },
+                    {
+                        "strategyName": "tradingStrategy",
+                        "currencyPairs": [
+                            "BTC_EUR",
+                            "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "B_ETH",
+                "strategies": [
+                    {
+                        "strategyName": "stopLossStrategy",
+                        "currencyPairs": [
+                            "ETH_EUR"
+                        ]
+                    },
+                    {
+                        "strategyName": "tradingStrategy",
+                        "currencyPairs": [
+                            "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "B_LTC",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategy",
+                        "currencyPairs": [
+                            "LTC_EUR"
+                        ]
+                    },
+                    {
+                        "strategyName": "stopLossStrategy",
+                        "currencyPairs": [
+                            "LTC_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "B_ALL",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategy",
+                        "currencyPairs": [
+                            "LTC_EUR", "BTC_EUR", "ETH_EUR"
+                        ]
+                    },
+                    {
+                        "strategyName": "stopLossStrategy",
+                        "currencyPairs": [
+                            "LTC_EUR", "BTC_EUR", "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "DAILY_BTC",
                 "strategies": [
                     {
                         "strategyName": "tradingStrategyDaily",
@@ -87,7 +157,54 @@
                 ]
             },
             {
-                "tradeName": "BTC_EUR_B2",
+                "tradeName": "DAILY_BTC_ETH",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyDaily",
+                        "currencyPairs": [
+                            "BTC_EUR",
+                            "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "DAILY_ETH",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyDaily",
+                        "currencyPairs": [
+                            "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "DAILY_LTC",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyDaily",
+                        "currencyPairs": [
+                            "LTC_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "DAILY_ALL",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyDaily",
+                        "currencyPairs": [
+                            "LTC_EUR",
+                            "BTC_EUR",
+                            "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "BC_BTC",
                 "strategies": [
                     {
                         "strategyName": "stopLossStrategy",
@@ -104,7 +221,77 @@
                 ]
             },
             {
-                "tradeName": "BTC_EUR_T",
+                "tradeName": "BC_BTC_ETH",
+                "strategies": [
+                    {
+                        "strategyName": "stopLossStrategy",
+                        "currencyPairs": [
+                            "BTC_EUR",
+                            "ETH_EUR"
+                        ]
+                    },
+                    {
+                        "strategyName": "tradingStrategyCustom",
+                        "currencyPairs": [
+                            "BTC_EUR",
+                            "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "BC_ETH",
+                "strategies": [
+                    {
+                        "strategyName": "stopLossStrategy",
+                        "currencyPairs": [
+                            "ETH_EUR"
+                        ]
+                    },
+                    {
+                        "strategyName": "tradingStrategyCustom",
+                        "currencyPairs": [
+                            "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "BC_LTC",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyCustom",
+                        "currencyPairs": [
+                            "LTC_EUR"
+                        ]
+                    },
+                    {
+                        "strategyName": "stopLossStrategy",
+                        "currencyPairs": [
+                            "LTC_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "BC_ALL",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyCustom",
+                        "currencyPairs": [
+                            "LTC_EUR", "BTC_EUR", "ETH_EUR"
+                        ]
+                    },
+                    {
+                        "strategyName": "stopLossStrategy",
+                        "currencyPairs": [
+                            "LTC_EUR", "BTC_EUR", "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "T_BTC",
                 "strategies": [
 
                     {
@@ -116,19 +303,7 @@
                 ]
             },
             {
-                "tradeName": "BTC_EUR_T2",
-                "strategies": [
-
-                    {
-                        "strategyName": "tradingStrategyCustom",
-                        "currencyPairs": [
-                            "BTC_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "BTC_ETH_T",
+                "tradeName": "T_BTC_ETH",
                 "strategies": [
                     {
                         "strategyName": "tradingStrategy",
@@ -140,102 +315,7 @@
                 ]
             },
             {
-                "tradeName": "BTC_ETH_B",
-                "strategies": [
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "BTC_EUR",
-                            "ETH_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "tradingStrategy",
-                        "currencyPairs": [
-                            "BTC_EUR",
-                            "ETH_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "BTC_ETH_B2",
-                "strategies": [
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "BTC_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "tradingStrategy",
-                        "currencyPairs": [
-                            "BTC_EUR",
-                            "ETH_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "BTC_ETH_C",
-                "strategies": [
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "BTC_EUR",
-                            "ETH_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "tradingStrategy",
-                        "currencyPairs": [
-                            "BTC_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "tradingStrategyCustom",
-                        "currencyPairs": [
-                            "ETH_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "ETH_EUR_B",
-                "strategies": [
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "ETH_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "tradingStrategy",
-                        "currencyPairs": [
-                            "ETH_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "ETH_EUR_B2",
-                "strategies": [
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "ETH_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "tradingStrategyCustom",
-                        "currencyPairs": [
-                            "ETH_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "ETH_EUR_T",
+                "tradeName": "T_ETH",
                 "strategies": [
                     {
                         "strategyName": "tradingStrategy",
@@ -246,18 +326,7 @@
                 ]
             },
             {
-                "tradeName": "ETH_EUR_T2",
-                "strategies": [
-                    {
-                        "strategyName": "tradingStrategyCustom",
-                        "currencyPairs": [
-                            "ETH_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "LTC_EUR_T",
+                "tradeName": "T_LTC",
                 "strategies": [
                     {
                         "strategyName": "tradingStrategy",
@@ -268,69 +337,7 @@
                 ]
             },
             {
-                "tradeName": "LTC_EUR_T2",
-                "strategies": [
-                    {
-                        "strategyName": "tradingStrategyCustom",
-                        "currencyPairs": [
-                            "LTC_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "LTC_EUR_B",
-                "strategies": [
-                    {
-                        "strategyName": "tradingStrategy",
-                        "currencyPairs": [
-                            "LTC_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "LTC_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "LTC_EUR_BC",
-                "strategies": [
-                    {
-                        "strategyName": "tradingStrategy",
-                        "currencyPairs": [
-                            "LTC_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "stopLossStrategy2",
-                        "currencyPairs": [
-                            "LTC_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "LTC_EUR_B2",
-                "strategies": [
-                    {
-                        "strategyName": "tradingStrategyCustom",
-                        "currencyPairs": [
-                            "LTC_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "LTC_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "ALL_TRADES_T",
+                "tradeName": "T_ALL",
                 "strategies": [
                     {
                         "strategyName": "tradingStrategy",
@@ -343,98 +350,60 @@
                 ]
             },
             {
-                "tradeName": "ALL_TRADES_T2",
+                "tradeName": "TC_BTC",
+                "strategies": [
+
+                    {
+                        "strategyName": "tradingStrategyCustom",
+                        "currencyPairs": [
+                            "BTC_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "TC_BTC_ETH",
                 "strategies": [
                     {
-                        "strategyName": "tradingStrategy",
+                        "strategyName": "tradingStrategyCustom",
+                        "currencyPairs": [
+                            "BTC_EUR",
+                            "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "TC_ETH",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyCustom",
+                        "currencyPairs": [
+                            "ETH_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "TC_LTC",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyCustom",
+                        "currencyPairs": [
+                            "LTC_EUR"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tradeName": "TC_ALL",
+                "strategies": [
+                    {
+                        "strategyName": "tradingStrategyCustom",
                         "currencyPairs": [
                             "LTC_EUR",
                             "BTC_EUR",
                             "ETH_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "ALL_TRADES_B",
-                "strategies": [
-                    {
-                        "strategyName": "tradingStrategy",
-                        "currencyPairs": [
-                            "LTC_EUR", "BTC_EUR", "ETH_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "LTC_EUR", "BTC_EUR", "ETH_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "ALL_TRADES_B2",
-                "strategies": [
-                    {
-                        "strategyName": "tradingStrategyCustom",
-                        "currencyPairs": [
-                            "LTC_EUR", "BTC_EUR", "ETH_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "LTC_EUR", "BTC_EUR", "ETH_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "ALL_TRADES_C",
-                "strategies": [
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "BTC_EUR",
-                            "ETH_EUR",
-                            "LTC_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "tradingStrategy",
-                        "currencyPairs": [
-                            "BTC_EUR",
-                            "LTC_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "tradingStrategyCustom",
-                        "currencyPairs": [
-                            "ETH_EUR"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tradeName": "ALL_TRADES_C2",
-                "strategies": [
-                    {
-                        "strategyName": "stopLossStrategy",
-                        "currencyPairs": [
-                            "BTC_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "tradingStrategy",
-                        "currencyPairs": [
-                            "BTC_EUR"
-                        ]
-                    },
-                    {
-                        "strategyName": "tradingStrategyCustom",
-                        "currencyPairs": [
-                            "ETH_EUR",
-                            "LTC_EUR"
                         ]
                     }
                 ]
@@ -446,10 +415,64 @@
         "tradeHistoryDays": 1,
         "fee": 0.3,
         "sandbox": false,
+        "allowFakeTrades": true,
+        "orderMinimums": [
+            {
+                "currency": "BTC",
+                "value": 0.001
+            },
+            {
+                "currency": "BCH",
+                "value": 0.01
+            },
+            {
+                "currency": "ETH",
+                "value": 0.01
+            },
+            {
+                "currency": "LTC",
+                "value": 0.1
+            },
+            {
+                "currency": "ETC",
+                "value": 0.1
+            },
+            {
+                "currency": "USD",
+                "value": 10
+            },
+            {
+                "currency": "EUR",
+                "value": 10
+            },
+            {
+                "currency": "GBP",
+                "value": 10
+            }
+        ],
         "currencyPairs": [
             {
                 "base_currency": "XRP",
                 "quote_currency": "EUR"
+            }
+        ],
+        "tradeConfigs": [
+            {
+                "tradeName": "B_BTC",
+                "strategies": [
+                    {
+                        "strategyName": "stopLossStrategy",
+                        "currencyPairs": [
+                            "BTC_EUR"
+                        ]
+                    },
+                    {
+                        "strategyName": "tradingStrategy",
+                        "currencyPairs": [
+                            "BTC_EUR"
+                        ]
+                    }
+                ]
             }
         ]
     }

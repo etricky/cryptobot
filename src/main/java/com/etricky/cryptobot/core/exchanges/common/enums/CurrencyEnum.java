@@ -2,6 +2,7 @@ package com.etricky.cryptobot.core.exchanges.common.enums;
 
 import java.util.Optional;
 
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 
 import lombok.Getter;
@@ -14,7 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 public enum CurrencyEnum {
 	BTC_EUR("BTC_EUR", "BTC", "EUR", CurrencyPair.BTC_EUR), BTC_USD("BTC_USD", "BTC", "USD", CurrencyPair.BTC_USD),
 	ETH_EUR("ETH_EUR", "ETH", "EUR", CurrencyPair.ETH_EUR), LTC_EUR("LTC_EUR", "LTC", "EUR", CurrencyPair.LTC_EUR),
-	XRP_EUR("XRP_EUR", "XRP", "EUR", CurrencyPair.XRP_EUR);
+	XRP_EUR("XRP_EUR", "XRP", "EUR", CurrencyPair.XRP_EUR),
+	BAT_USDC("BAT_USDC", "BAT", "USDC", new CurrencyPair(Currency.BAT, new Currency("USDC")));
 
 	String shortName;
 	String baseCurrency;
@@ -47,6 +49,13 @@ public enum CurrencyEnum {
 		}
 	}
 
+	/**
+	 * Creates a new instance based on the base and quote currency
+	 * 
+	 * @param base  Base currency
+	 * @param quote Quote currency
+	 * @return CurrencyEnum or an empty Optional
+	 */
 	public static Optional<CurrencyEnum> getInstanceByQuoteBase(String base, String quote) {
 		if (getInstanceByShortName(base + "_" + quote).isPresent()) {
 			return getInstanceByShortName(base + "_" + quote);
@@ -54,4 +63,5 @@ public enum CurrencyEnum {
 
 		return Optional.empty();
 	}
+
 }

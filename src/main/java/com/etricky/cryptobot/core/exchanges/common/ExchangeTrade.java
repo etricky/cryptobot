@@ -7,8 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.ta4j.core.BaseTradingRecord;
@@ -16,10 +14,10 @@ import org.ta4j.core.Order.OrderType;
 import org.ta4j.core.TradingRecord;
 import org.ta4j.core.num.PrecisionNum;
 
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.exchanges.common.enums.CurrencyEnum;
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeEnum;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeExceptionRT;
 import com.etricky.cryptobot.core.exchanges.common.threads.ExchangeThreads;
 import com.etricky.cryptobot.core.interfaces.Commands;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFiles;
@@ -36,8 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ExchangeTrade extends AbstractExchange implements PropertyChangeListener {
 	public final static String EXCHANGE_TRADE = "exchangeTrade";
 	public final static int TRADE = 1, CURRENCY = 0;
-	@Autowired
-	private ApplicationContext appContext;
 
 	@Getter
 	private Map<String, ExchangeTradeCurrency> exchangeTradeCurrencyMap = new HashMap<>();

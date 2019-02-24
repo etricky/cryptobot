@@ -9,7 +9,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ResourceUtils;
 
-import com.etricky.cryptobot.core.exchanges.common.exceptions.ExchangeException;
+import com.etricky.cryptobot.core.common.exceptions.ExchangeException;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.ExchangeJson;
 import com.etricky.cryptobot.core.interfaces.jsonFiles.JsonFilesReader;
 import com.fasterxml.jackson.core.JsonParseException;
