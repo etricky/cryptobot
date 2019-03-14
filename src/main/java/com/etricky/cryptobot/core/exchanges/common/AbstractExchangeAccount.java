@@ -32,9 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class AbstractExchangeAccount extends AbstractExchange implements Runnable {
 
-	public final static int QUOTE_CURRENCY = 0;
-	public final static int BASE_CURRENCY = 1;
-
 	@Getter
 	protected Exchange exchange;
 	protected ExchangeKeys exchangeKeys;

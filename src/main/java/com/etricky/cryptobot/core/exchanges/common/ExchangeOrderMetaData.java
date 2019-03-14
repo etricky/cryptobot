@@ -1,5 +1,6 @@
 package com.etricky.cryptobot.core.exchanges.common;
 
+import org.knowm.xchange.dto.Order.OrderStatus;
 import org.knowm.xchange.dto.Order.OrderType;
 
 import com.etricky.cryptobot.core.exchanges.common.enums.ExchangeOrderTypeEnum;
@@ -13,5 +14,6 @@ public class ExchangeOrderMetaData {
 	private String id;
 	private String currencyShortName;
 	private OrderType orderType;
+	private OrderStatus orderStatus;
 	private ExchangeOrderTypeEnum exchangeOrderType;
 }

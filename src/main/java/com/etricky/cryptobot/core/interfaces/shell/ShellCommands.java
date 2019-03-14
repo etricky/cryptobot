@@ -376,13 +376,16 @@ public class ShellCommands implements Quit.Command {
 
 	@ShellMethod(value = "Runs a generic test", key = { "test" })
 	public void genericTest(@ShellOption(defaultValue = "") String arg1, @ShellOption(defaultValue = "") String arg2,
-			@ShellOption(defaultValue = "") String arg3) {
-		String[] args = new String[3];
+			@ShellOption(defaultValue = "") String arg3, @ShellOption(defaultValue = "") String arg4,
+			@ShellOption(defaultValue = "") String arg5) {
+		String[] args = new String[5];
 		log.debug("start");
 
 		args[0] = arg1;
 		args[1] = arg2;
 		args[2] = arg3;
+		args[3] = arg4;
+		args[4] = arg5;
 
 		commands.genericTest(args);
 

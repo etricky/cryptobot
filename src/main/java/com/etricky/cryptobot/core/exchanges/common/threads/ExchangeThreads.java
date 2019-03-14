@@ -32,11 +32,19 @@ public class ExchangeThreads {
 	public final static int OK = 0;
 	public final static int TRADE_THREAD_EXISTS = 1;
 	public final static int TRADE_THREAD_NOT_EXISTS = 2;
-	public final static String TRADING_THREAD = "T";
-	public final static String ORDERS_THREAD = "O";
-	public final static String ACCOUNT_THREAD = "A";
-	public final static String BACKTEST_THREAD = "B";
+
 	public final static String POOL_BACKTEST = "backtest_pool";
+
+	public enum ThreadType {
+		TRADING_THREAD("T"), ORDERS_THREAD("O"), ACCOUNT_THREAD("A"), BACKTEST_THREAD("B");
+
+		@Getter
+		protected String shortCode;
+
+		private ThreadType(String shortCode) {
+			this.shortCode = shortCode;
+		}
+	}
 
 	@Autowired
 	private ApplicationContext appContext;
@@ -102,7 +110,8 @@ public class ExchangeThreads {
 
 				abstractExchangeAccount = (AbstractExchangeAccount) appContext.getBean(exchangeEnum.getAccountBean());
 
-				ThreadInfo threadInfo = new ThreadInfo(getThreadName(exchange, tradeName, ACCOUNT_THREAD, null));
+				ThreadInfo threadInfo = new ThreadInfo(
+						getThreadName(exchange, tradeName, ThreadType.ACCOUNT_THREAD, null));
 				abstractExchangeAccount.initialize(exchangeEnum, Optional.of(threadInfo), true);
 
 				exchangeAccountsThreadsMap.put(exchange, abstractExchangeAccount);
@@ -134,7 +143,7 @@ public class ExchangeThreads {
 
 					// starts the trading thread
 					ThreadInfo threadInfo = new ThreadInfo(
-							getThreadName(exchange, tradeName, TRADING_THREAD, currencyEnum));
+							getThreadName(exchange, tradeName, ThreadType.TRADING_THREAD, currencyEnum));
 					abstractExchangeTrading.initialize(exchangeEnum, currencyEnum, threadInfo, false);
 
 					log.debug("create exchange {} trading bean for currencyPair: {}", exchange, currencyPair);
@@ -205,10 +214,10 @@ public class ExchangeThreads {
 		log.debug("done. exchangeTradeKey: {}", exchangeTradeKey);
 	}
 
-	public static String getThreadName(String exchange, String tradeName, String threadType,
+	public static String getThreadName(String exchange, String tradeName, ThreadType threadType,
 			CurrencyEnum currencyEnum) {
 		String threadName;
-		if (threadType == TRADING_THREAD) {
+		if (threadType == ThreadType.TRADING_THREAD) {
 			threadName = threadType + "_" + exchange + "-" + tradeName + "-" + currencyEnum.getShortName();
 		} else {
 			threadName = threadType + "_" + exchange;
@@ -218,14 +227,14 @@ public class ExchangeThreads {
 		return threadName;
 	}
 
-	private boolean threadShared(String exchange, String tradeName, String currencyEnum, String threadType) {
+	private boolean threadShared(String exchange, String tradeName, String currencyEnum, ThreadType threadType) {
 		boolean result = false;
 		countSharedThreads = 0;
 
 		log.debug("start. exchange: {} tradeName: {} currencyEnum: {} threadType: {}", exchange, tradeName,
 				currencyEnum, threadType);
 
-		if (threadType == TRADING_THREAD) {
+		if (threadType == ThreadType.TRADING_THREAD) {
 			exchangeTradeMap.values().forEach(trade -> {
 				if (!trade.getTradeName().equalsIgnoreCase(tradeName)) {
 					trade.getExchangeTradeCurrencyMap().values().forEach(trading -> {
@@ -236,7 +245,7 @@ public class ExchangeThreads {
 					});
 				}
 			});
-		} else if (threadType == ACCOUNT_THREAD) {
+		} else if (threadType == ThreadType.ACCOUNT_THREAD) {
 			exchangeTradeMap.values().forEach(trade -> {
 				if (!trade.getTradeName().equalsIgnoreCase(tradeName)
 						&& trade.getExchangeAccount().getExchangeEnum().getName().equalsIgnoreCase(exchange)) {
@@ -273,6 +282,14 @@ public class ExchangeThreads {
 		log.debug("done");
 	}
 
+	/**
+	 * Stops the trade thread for an exchange. If this is the last trade thread, it
+	 * will also stop the account thread
+	 * 
+	 * @param exchange  Id of the exchange
+	 * @param tradeName Name of the trade thread
+	 * @return
+	 */
 	public synchronized int stopTradeThreads(String exchange, String tradeName) {
 		log.debug("start. exchange: {} tradeName: {}", exchange, tradeName);
 
@@ -283,7 +300,7 @@ public class ExchangeThreads {
 			// stops all currency threads first if not shared with another trade
 			exchangeTradeMap.get(exchangeTradeKey).getExchangeTradingMap().forEach((curr, exchangeTrading) -> {
 
-				if (!threadShared(exchange, tradeName, curr, TRADING_THREAD)) {
+				if (!threadShared(exchange, tradeName, curr, ThreadType.TRADING_THREAD)) {
 
 					log.debug("sending interrupt to trading thread: {} id: {}",
 							exchangeTrading.getThreadInfo().getThreadName(),
@@ -300,7 +317,7 @@ public class ExchangeThreads {
 				}
 			});
 
-			if (!threadShared(exchange, tradeName, null, ACCOUNT_THREAD)) {
+			if (!threadShared(exchange, tradeName, null, ThreadType.ACCOUNT_THREAD)) {
 				log.debug("sending interrupt to orders thread: {} id: {}",
 						exchangeTradeMap.get(exchangeTradeKey).getExchangeAccount().getThreadInfo().getThreadName(),
 						exchangeTradeMap.get(exchangeTradeKey).getExchangeAccount().getThreadInfo().getThread()

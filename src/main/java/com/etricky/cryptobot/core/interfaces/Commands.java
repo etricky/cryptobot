@@ -272,8 +272,9 @@ public class Commands {
 			if (validateTrade(_exchange)) {
 				AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
 						.getBean(ExchangeEnum.getInstanceByName(_exchange).get().getAccountBean());
-				abstractExchangeAccount.initialize(ExchangeEnum.getInstanceByName(_exchange).get(), Optional.empty(), true);
-				sendMessage(abstractExchangeAccount.getAbstractExchangeOrders().getOpenOrdersString(), toExternalApp);
+				abstractExchangeAccount.initialize(ExchangeEnum.getInstanceByName(_exchange).get(), Optional.empty(),
+						true);
+				sendMessage(abstractExchangeAccount.getAbstractExchangeOrders().getExchangeOpenOrdersString(), toExternalApp);
 			}
 		} catch (Exception e) {
 			exceptionHandler(e);
@@ -296,7 +297,7 @@ public class Commands {
 					abstractExchangeAccount.initialize(ExchangeEnum.getInstanceByName(_exchange).get(),
 							Optional.empty(), true);
 
-					if (abstractExchangeAccount.getAbstractExchangeOrders().checkOrder(currencyPair)) {
+					if (abstractExchangeAccount.getAbstractExchangeOrders().checkOrderExistsForCurrency(currencyPair)) {
 						if (abstractExchangeAccount.getAbstractExchangeOrders().cancelOrder(currencyPair)) {
 							auxString = "Order has been canceled";
 						} else {
@@ -329,7 +330,8 @@ public class Commands {
 			if (validateTrade(_exchange)) {
 				AbstractExchangeAccount abstractExchangeAccount = (AbstractExchangeAccount) appContext
 						.getBean(ExchangeEnum.getInstanceByName(_exchange).get().getAccountBean());
-				abstractExchangeAccount.initialize(ExchangeEnum.getInstanceByName(_exchange).get(), Optional.empty(), true);
+				abstractExchangeAccount.initialize(ExchangeEnum.getInstanceByName(_exchange).get(), Optional.empty(),
+						true);
 				sendMessage(abstractExchangeAccount.getAbstractExchangeOrders().cancelAllOrders(), toExternalApp);
 			}
 		} catch (Exception e) {
@@ -497,6 +499,12 @@ public class Commands {
 		log.debug("start. exitCode: {}", exitCode);
 
 		try {
+
+			if (exitCode.getExitCode() != 0) {
+				// closes all threads
+				exchangeThreads.stopAllThreads();
+			}
+
 			SpringApplication.exit(appContext, exitCode);
 			slack.disconnect();
 			log.debug("Cryptobot exited");

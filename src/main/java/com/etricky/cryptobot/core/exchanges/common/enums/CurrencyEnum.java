@@ -43,6 +43,8 @@ public enum CurrencyEnum {
 			return Optional.of(CurrencyEnum.LTC_EUR);
 		} else if (shortName.equalsIgnoreCase(XRP_EUR.shortName)) {
 			return Optional.of(CurrencyEnum.XRP_EUR);
+		} else if (shortName.equalsIgnoreCase(BAT_USDC.shortName)) {
+			return Optional.of(CurrencyEnum.BAT_USDC);
 		} else {
 			log.trace("no currency match");
 			return Optional.empty();
